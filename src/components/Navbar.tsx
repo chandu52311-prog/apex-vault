@@ -184,6 +184,7 @@ export function GlobalLocationSelector({ className = '' }: { className?: string 
   );
 }
 
+// ALIAS TO FIX VERCEL BUILD ERROR
 export const CitySelect = GlobalLocationSelector;
 
 function NavbarInner() {
