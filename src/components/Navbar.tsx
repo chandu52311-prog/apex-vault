@@ -41,7 +41,6 @@ export function SearchBox({
   const [hits, setHits] = useState<Hit[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(-1);
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,10 +71,7 @@ export function SearchBox({
             }));
           }),
         );
-        if (!cancelled) {
-          setHits(groups.flat());
-          setActive(-1);
-        }
+        if (!cancelled) setHits(groups.flat());
       } catch {
         if (!cancelled) setHits([]);
       } finally {
@@ -102,28 +98,6 @@ export function SearchBox({
     router.push(hitHref(h));
   };
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setOpen(true);
-      setActive((a) => Math.min(a + 1, hits.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setActive((a) => Math.max(a - 1, -1));
-    } else if (e.key === 'Escape') {
-      setOpen(false);
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (active >= 0 && hits[active]) return go(hits[active]);
-      if (mode === 'jump') {
-        if (hits[0]) go(hits[0]);
-        return;
-      }
-      setOpen(false);
-      onSubmitQuery?.(q.trim());
-    }
-  };
-
   const showPanel = open && cleanTerm(q).length >= 2;
 
   return (
@@ -135,7 +109,6 @@ export function SearchBox({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        onKeyDown={onKeyDown}
         placeholder="Quick Search Supercars, Bikes, Gadgets..."
         className="h-10 w-full rounded-xl border border-neutral-800 bg-[#121212] px-4 text-xs text-white placeholder-neutral-500 outline-none transition focus:border-amber-500"
       />
@@ -143,7 +116,7 @@ export function SearchBox({
         <ul className="absolute left-0 right-0 top-12 z-50 max-h-96 overflow-auto rounded-xl border border-neutral-800 bg-[#121212] p-1 shadow-2xl">
           {loading && hits.length === 0 ? <li className="px-3 py-3 text-xs text-neutral-400">Searching Vault...</li> : null}
           {!loading && hits.length === 0 ? <li className="px-3 py-3 text-xs text-neutral-500">No models found.</li> : null}
-          {hits.map((h, i) => (
+          {hits.map((h) => (
             <li key={`${h.table}:${h.id}`}>
               <button
                 type="button"
@@ -166,14 +139,13 @@ export function SearchBox({
   );
 }
 
-export function GlobalLocationSelector() {
+export function GlobalLocationSelector({ className = '' }: { className?: string }) {
   const { country, metro, selectCountry, selectMetro } = useRegion();
   const tier1List = COUNTRIES.filter((c) => c.isTier1);
   const restList = COUNTRIES.filter((c) => !c.isTier1);
 
   return (
-    <div className="flex items-center space-x-2 bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-xl text-xs">
-      {/* 195 Countries Dropdown */}
+    <div className={`flex items-center space-x-2 bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-xl text-xs ${className}`}>
       <select
         value={country.id}
         onChange={(e) => selectCountry(e.target.value)}
@@ -197,7 +169,6 @@ export function GlobalLocationSelector() {
 
       <span className="text-neutral-700">/</span>
 
-      {/* Dynamic City Dropdown */}
       <select
         value={metro.id}
         onChange={(e) => selectMetro(e.target.value)}
@@ -213,6 +184,8 @@ export function GlobalLocationSelector() {
   );
 }
 
+export const CitySelect = GlobalLocationSelector;
+
 function NavbarInner() {
   const router = useRouter();
   const params = useSearchParams();
@@ -222,7 +195,6 @@ function NavbarInner() {
   return (
     <header className="sticky top-0 z-40 bg-[#080808]/95 backdrop-blur-md border-b border-neutral-800 px-4 py-3">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Brand Logo */}
         <Link href="/" className="flex items-center space-x-3 cursor-pointer self-start md:self-auto">
           <div className="w-10 h-10 bg-gradient-to-tr from-amber-500 to-amber-300 rounded-lg flex items-center justify-center font-black text-black text-xl shadow-lg shadow-amber-500/20">
             A
@@ -237,14 +209,10 @@ function NavbarInner() {
           </div>
         </Link>
 
-        {/* Global Search Bar */}
         <SearchBox className="w-full md:w-80" />
-
-        {/* 195 Country & City Selector */}
         <GlobalLocationSelector />
       </div>
 
-      {/* Categories Tabs */}
       <div className="border-t border-neutral-900 mt-3 pt-2 flex justify-center space-x-2 overflow-x-auto">
         {CATEGORIES.map((c) => {
           const isActive = c.key === cat;
