@@ -199,7 +199,7 @@ const TIER_1_COUNTRIES: Country[] = [
   },
 ];
 
-// 2. WORLDWIDE REMAINING COUNTRIES (UN-195 MEMBERS)
+// 2. WORLDWIDE REMAINING COUNTRIES (180+ MEMBERS)
 const GLOBAL_REST_NAMES: [string, string, string, string, number, number][] = [
   ['Afghanistan', 'AF', 'AFN', 'Af', 71.0, 0.10],
   ['Albania', 'AL', 'ALL', 'Lek', 93.0, 0.20],
