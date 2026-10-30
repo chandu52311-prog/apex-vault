@@ -66,7 +66,6 @@ export default function ItemDetail() {
     );
   }
 
-  // Base price in USD converted to country local currency
   let baseUSD = Number(product.base_price_usd || product.price_usd || product.current_price_usd || 0);
   if (!baseUSD && product.ex_showroom_inr) {
     baseUSD = Number(product.ex_showroom_inr) / 88.0;
@@ -96,7 +95,7 @@ export default function ItemDetail() {
   return (
     <div className="min-h-screen bg-[#050505] text-neutral-100 flex flex-col font-sans selection:bg-amber-500 selection:text-black">
       
-      {/* Top Header */}
+      {/* Top Navigation */}
       <header className="sticky top-0 z-40 bg-[#080808]/95 backdrop-blur-md border-b border-neutral-800 px-4 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link
@@ -136,7 +135,7 @@ export default function ItemDetail() {
         </div>
       </header>
 
-      {/* Main Luxury Showcase */}
+      {/* Main Showcase */}
       <main className="max-w-7xl mx-auto px-4 py-8 w-full flex-1">
         
         <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-neutral-800 pb-4 mb-6">
@@ -156,7 +155,7 @@ export default function ItemDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* LEFT: MASSIVE 4K PHOTO & COLOR PALETTE */}
+          {/* 4K Hero Showcase & Color Circles */}
           <div className="lg:col-span-8 space-y-5">
             <div className="relative h-[420px] sm:h-[540px] w-full rounded-3xl overflow-hidden bg-neutral-950 border border-neutral-800 shadow-2xl">
               <img
@@ -168,7 +167,7 @@ export default function ItemDetail() {
                 {activeColor ? activeColor.name : 'Factory Edition'}
               </div>
 
-              {/* City Stock Status */}
+              {/* Real-time local stock status */}
               <div className="absolute bottom-4 left-4 right-4 sm:right-auto bg-black/80 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl flex items-center space-x-2 text-xs">
                 {inStockAtCity ? (
                   <>
@@ -188,7 +187,7 @@ export default function ItemDetail() {
               </div>
             </div>
 
-            {/* LIVE COLOR CIRCLES */}
+            {/* Bespoke Color Circles */}
             {product.colors && product.colors.length > 0 && (
               <div className="bg-[#0e0e0e] border border-neutral-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
@@ -220,9 +219,8 @@ export default function ItemDetail() {
             )}
           </div>
 
-          {/* RIGHT: LIVE ON-ROAD BREAKDOWN & DEALER INQUIRY */}
+          {/* Pricing & Dealership Leads */}
           <div className="lg:col-span-4 bg-[#0e0e0e] border border-neutral-800 rounded-3xl p-6 sm:p-7 space-y-6">
-            
             <div>
               <span className="text-[11px] uppercase tracking-widest text-neutral-400 block font-bold">
                 Live On-Road Price in {metro.name}
@@ -267,7 +265,7 @@ export default function ItemDetail() {
                     rel="noopener noreferrer"
                     className="w-full bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-700 py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2"
                   >
-                    <span>Check Croma / Reliance Digital Offer</span>
+                    <span>Check Croma / Official Store</span>
                   </a>
                 </>
               ) : (
@@ -299,7 +297,7 @@ export default function ItemDetail() {
           </div>
         </div>
 
-        {/* FULL TECHNICAL REGISTRY */}
+        {/* Technical Registry */}
         <div className="mt-12 bg-[#0e0e0e] border border-neutral-800 rounded-3xl p-6 sm:p-8">
           <h2 className="text-xl font-black text-white uppercase tracking-wider mb-6">
             Technical Registry & Performance
@@ -340,7 +338,7 @@ export default function ItemDetail() {
 
       </main>
 
-      {/* LEAD CONSULTATION MODAL */}
+      {/* Leads modal */}
       {leadOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#121212] border border-neutral-800 p-6 rounded-3xl max-w-md w-full shadow-2xl">
