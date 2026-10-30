@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -17,12 +17,14 @@ interface ColorOption {
 function ItemDetailContent() {
   const params = useParams();
   const { metro, country, selectCountry, selectMetro } = useRegion();
+  
   const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
-  const id = rawId ? decodeURIComponent(rawId) : '';
+  const id = useMemo(() => (rawId ? decodeURIComponent(rawId) : ''), [rawId]);
 
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeColor, setActiveColor] = useState<ColorOption | null>(null);
+  const [activeImage, setActiveImage] = useState<string>('');
+  const [activeColorName, setActiveColorName] = useState<string>('');
 
   const [leadOpen, setLeadOpen] = useState(false);
   const [name, setName] = useState('');
@@ -30,23 +32,65 @@ function ItemDetailContent() {
   const [leadDone, setLeadDone] = useState(false);
 
   useEffect(() => {
+    let isCancelled = false;
+
     async function loadMachine() {
       if (!id) return;
       setLoading(true);
+
       const tables: Table[] = ['cars', 'bikes', 'gadgets'];
+      let foundData: any = null;
+
       for (const table of tables) {
-        const { data } = await supabase.from(table).select('*').eq('id', id).maybeSingle();
-        if (data) {
-          setProduct({ ...data, table });
-          if (data.colors && Array.isArray(data.colors) && data.colors.length > 0) {
-            setActiveColor(data.colors[0]);
-          }
+        const { data, error } = await supabase.from(table).select('*').eq('id', id).maybeSingle();
+        if (data && !error) {
+          foundData = { ...data, table };
           break;
         }
       }
-      setLoading(false);
+
+      if (!isCancelled && foundData) {
+        // Parse colors safely (String format lo unna Array ga marchadam)
+        let parsedColors: ColorOption[] = [];
+        if (Array.isArray(foundData.colors)) {
+          parsedColors = foundData.colors;
+        } else if (typeof foundData.colors === 'string') {
+          try {
+            parsedColors = JSON.parse(foundData.colors);
+          } catch {
+            parsedColors = [];
+          }
+        }
+
+        // Parse gallery photos safely (Only this specific vehicle's photos)
+        let parsedGallery: string[] = [];
+        if (Array.isArray(foundData.gallery)) {
+          parsedGallery = foundData.gallery.filter(Boolean);
+        }
+
+        foundData.colors = parsedColors;
+        foundData.gallery = parsedGallery;
+
+        setProduct(foundData);
+
+        // First initial photo and color setup
+        if (parsedColors.length > 0) {
+          setActiveImage(parsedColors[0].image);
+          setActiveColorName(parsedColors[0].name);
+        } else {
+          setActiveImage(foundData.thumbnail_url || '');
+          setActiveColorName('Factory Edition');
+        }
+      }
+
+      if (!isCancelled) setLoading(false);
     }
+
     loadMachine();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [id]);
 
   if (loading) {
@@ -66,6 +110,7 @@ function ItemDetailContent() {
     );
   }
 
+  // Base price in USD converted to country local currency
   let baseUSD = Number(product.base_price_usd || product.price_usd || product.current_price_usd || 0);
   if (!baseUSD && product.ex_showroom_inr) {
     baseUSD = Number(product.ex_showroom_inr) / 88.0;
@@ -75,8 +120,17 @@ function ItemDetailContent() {
   const insurance = product.table !== 'gadgets' ? baseLocal * country.insuranceRate : 0;
   const totalOnRoad = baseLocal + tax + insurance;
 
-  const currentImage = activeColor ? activeColor.image : product.thumbnail_url;
-  const inStockAtCity = activeColor?.cities ? activeColor.cities.includes(metro.name) : true;
+  // Active color object check
+  const activeColorObj = (product.colors as ColorOption[]).find((c) => c.name === activeColorName);
+  const inStockAtCity = activeColorObj?.cities ? activeColorObj.cities.includes(metro.name) : true;
+
+  // Color click chesinappudu ventane image maarche function
+  const handleColorSelect = (color: ColorOption) => {
+    setActiveColorName(color.name);
+    if (color.image) {
+      setActiveImage(color.image);
+    }
+  };
 
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +139,7 @@ function ItemDetailContent() {
       name: name.trim() || 'VIP Inquirer',
       phone: phone.trim(),
       city: metro.name,
-      model: `${product.brand} ${product.model_name} (${activeColor?.name || 'Selected Spec'})`,
+      model: `${product.brand} ${product.model_name} (${activeColorName})`,
       item_id: product.id,
       item_table: product.table,
     });
@@ -100,7 +154,7 @@ function ItemDetailContent() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link
             href="/"
-            className="flex items-center space-x-2 text-neutral-400 hover:text-white text-xs font-semibold uppercase tracking-wider bg-neutral-900 border border-neutral-800 px-3 py-2 rounded-xl"
+            className="flex items-center space-x-2 text-neutral-400 hover:text-white text-xs font-semibold uppercase tracking-wider bg-neutral-900 border border-neutral-800 px-3 py-2 rounded-xl transition"
           >
             <ArrowLeft size={16} />
             <span>Back to Vault</span>
@@ -155,19 +209,22 @@ function ItemDetailContent() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* 4K Hero Showcase & Color Circles */}
+          {/* LEFT: 4K HERO SHOWCASE & BESPOKE FINISHES */}
           <div className="lg:col-span-8 space-y-5">
+            
+            {/* Big Main Image Container */}
             <div className="relative h-[420px] sm:h-[540px] w-full rounded-3xl overflow-hidden bg-neutral-950 border border-neutral-800 shadow-2xl">
               <img
-                src={currentImage}
+                key={activeImage}
+                src={activeImage || product.thumbnail_url}
                 alt={product.model_name}
-                className="w-full h-full object-cover transition-all duration-700 ease-in-out"
+                className="w-full h-full object-cover transition-opacity duration-300"
               />
               <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-xs font-bold text-white border border-white/10">
-                {activeColor ? activeColor.name : 'Factory Edition'}
+                {activeColorName}
               </div>
 
-              {/* Real-time local stock status */}
+              {/* City Stock Status */}
               <div className="absolute bottom-4 left-4 right-4 sm:right-auto bg-black/80 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl flex items-center space-x-2 text-xs">
                 {inStockAtCity ? (
                   <>
@@ -187,21 +244,22 @@ function ItemDetailContent() {
               </div>
             </div>
 
-            {/* Bespoke Color Circles */}
+            {/* COLOR PALETTE BUTTONS (Color circle click chesthe direct ga image maaruthundhi) */}
             {product.colors && product.colors.length > 0 && (
               <div className="bg-[#0e0e0e] border border-neutral-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <span className="text-xs uppercase font-bold text-neutral-400 tracking-wider block">Official Bespoke Finishes</span>
-                  <span className="text-sm font-extrabold text-amber-400">{activeColor?.name}</span>
+                  <span className="text-sm font-extrabold text-amber-400">{activeColorName}</span>
                 </div>
 
                 <div className="flex items-center space-x-3">
                   {product.colors.map((c: ColorOption, idx: number) => {
-                    const isSelected = activeColor?.name === c.name;
+                    const isSelected = activeColorName === c.name;
                     return (
                       <button
                         key={idx}
-                        onClick={() => setActiveColor(c)}
+                        type="button"
+                        onClick={() => handleColorSelect(c)}
                         title={c.name}
                         className={`group relative flex items-center justify-center p-1 rounded-full transition-all duration-200 ${
                           isSelected ? 'ring-2 ring-amber-500 scale-110' : 'hover:scale-105 opacity-70 hover:opacity-100'
@@ -217,10 +275,35 @@ function ItemDetailContent() {
                 </div>
               </div>
             )}
+
+            {/* Exclusive Multi-Angle Gallery Thumbnails (Only this model's photos) */}
+            {product.gallery && product.gallery.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-[11px] uppercase tracking-wider text-neutral-500 font-bold block">
+                  Studio Angles & Views
+                </span>
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {product.gallery.map((imgUrl: string, idx: number) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setActiveImage(imgUrl)}
+                      className={`h-20 w-32 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
+                        activeImage === imgUrl ? 'border-amber-500 scale-95' : 'border-neutral-800 opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={imgUrl} alt={`angle-${idx}`} className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
 
-          {/* Pricing & Dealership Leads */}
+          {/* RIGHT: PRICING BREAKDOWN & DEALERSHIP INQUIRY */}
           <div className="lg:col-span-4 bg-[#0e0e0e] border border-neutral-800 rounded-3xl p-6 sm:p-7 space-y-6">
+            
             <div>
               <span className="text-[11px] uppercase tracking-widest text-neutral-400 block font-bold">
                 Live On-Road Price in {metro.name}
@@ -256,7 +339,7 @@ function ItemDetailContent() {
                     rel="noopener noreferrer"
                     className="w-full bg-amber-500 hover:bg-amber-400 text-black py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-lg shadow-amber-500/20"
                   >
-                    <span>Buy on Amazon ({activeColor?.name || 'Selected'})</span>
+                    <span>Buy on Amazon ({activeColorName})</span>
                     <ExternalLink size={16} />
                   </a>
                   <a
@@ -271,6 +354,7 @@ function ItemDetailContent() {
               ) : (
                 <>
                   <button
+                    type="button"
                     onClick={() => setLeadOpen(true)}
                     className="w-full bg-amber-500 hover:bg-amber-400 text-black py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-lg shadow-amber-500/20"
                   >
@@ -344,7 +428,7 @@ function ItemDetailContent() {
           <div className="bg-[#121212] border border-neutral-800 p-6 rounded-3xl max-w-md w-full shadow-2xl">
             <h3 className="text-xl font-black text-white uppercase">Inquire in {metro.name}</h3>
             <p className="text-xs text-neutral-400 mt-1">
-              Booking allocation for <strong>{product.model_name}</strong> in {activeColor?.name || 'Selected Spec'}.
+              Booking allocation for <strong>{product.model_name}</strong> in {activeColorName}.
             </p>
 
             {leadDone ? (
@@ -378,6 +462,7 @@ function ItemDetailContent() {
             )}
 
             <button
+              type="button"
               onClick={() => { setLeadOpen(false); setLeadDone(false); }}
               className="mt-3 text-neutral-500 text-xs text-center w-full block hover:underline"
             >
