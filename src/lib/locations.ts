@@ -18,7 +18,7 @@ export interface Country {
   symbol: string;
   taxLabel: string;
   insuranceRate: number;
-  exchangeRateToUSD: number; // 1 USD = X Local Currency
+  exchangeRateToUSD: number;
   isTier1?: boolean;
   metros: Metro[];
 }
@@ -83,7 +83,7 @@ const TIER_1_COUNTRIES: Country[] = [
     name: 'United Kingdom',
     currency: 'GBP',
     symbol: '£',
-    taxLabel: 'VAT & First Year Road Tax',
+    taxLabel: 'VAT & Road Tax',
     insuranceRate: 0.04,
     exchangeRateToUSD: 0.78,
     isTier1: true,
@@ -102,9 +102,7 @@ const TIER_1_COUNTRIES: Country[] = [
     insuranceRate: 0.03,
     exchangeRateToUSD: 0.92,
     isTier1: true,
-    metros: [
-      { id: 'mc-mte', name: 'Monte Carlo', taxRate: 0.20 },
-    ],
+    metros: [{ id: 'mc-mte', name: 'Monte Carlo', taxRate: 0.20 }],
   },
   {
     id: 'DE',
@@ -119,7 +117,6 @@ const TIER_1_COUNTRIES: Country[] = [
       { id: 'de-muc', name: 'Munich', taxRate: 0.19 },
       { id: 'de-fra', name: 'Frankfurt', taxRate: 0.19 },
       { id: 'de-ber', name: 'Berlin', taxRate: 0.19 },
-      { id: 'de-stu', name: 'Stuttgart', taxRate: 0.19 },
     ],
   },
   {
@@ -141,13 +138,11 @@ const TIER_1_COUNTRIES: Country[] = [
     name: 'Singapore',
     currency: 'SGD',
     symbol: 'S$',
-    taxLabel: 'COE & ARF Luxury Duty',
+    taxLabel: 'COE & ARF Duty',
     insuranceRate: 0.025,
     exchangeRateToUSD: 1.34,
     isTier1: true,
-    metros: [
-      { id: 'sg-sin', name: 'Singapore Central', taxRate: 1.10 }, // Singapore COE luxury ARF
-    ],
+    metros: [{ id: 'sg-sin', name: 'Singapore Central', taxRate: 1.10 }],
   },
   {
     id: 'CH',
@@ -182,7 +177,7 @@ const TIER_1_COUNTRIES: Country[] = [
     name: 'Australia',
     currency: 'AUD',
     symbol: 'A$',
-    taxLabel: 'Luxury Car Tax (LCT) & Stamp Duty',
+    taxLabel: 'Luxury Car Tax (LCT)',
     insuranceRate: 0.035,
     exchangeRateToUSD: 1.52,
     isTier1: true,
@@ -200,9 +195,7 @@ const TIER_1_COUNTRIES: Country[] = [
     insuranceRate: 0.025,
     exchangeRateToUSD: 3.64,
     isTier1: true,
-    metros: [
-      { id: 'qa-doh', name: 'Doha', taxRate: 0.05 },
-    ],
+    metros: [{ id: 'qa-doh', name: 'Doha', taxRate: 0.05 }],
   },
 ];
 
@@ -213,17 +206,13 @@ const GLOBAL_REST_NAMES: [string, string, string, string, number, number][] = [
   ['Algeria', 'DZ', 'DZD', 'DA', 134.0, 0.19],
   ['Andorra', 'AD', 'EUR', '€', 0.92, 0.045],
   ['Angola', 'AO', 'AOA', 'Kz', 850.0, 0.14],
-  ['Antigua and Barbuda', 'AG', 'XCD', 'EC$', 2.70, 0.15],
   ['Argentina', 'AR', 'ARS', '$', 980.0, 0.35],
   ['Armenia', 'AM', 'AMD', '֏', 387.0, 0.20],
   ['Austria', 'AT', 'EUR', '€', 0.92, 0.20],
-  ['Azerbaijan', 'AZ', 'AZN', '₼', 1.70, 0.18],
   ['Bahamas', 'BS', 'BSD', 'B$', 1.0, 0.12],
   ['Bahrain', 'BH', 'BHD', 'BD', 0.38, 0.10],
   ['Bangladesh', 'BD', 'BDT', '৳', 119.0, 0.25],
-  ['Barbados', 'BB', 'BBD', 'Bds$', 2.0, 0.17],
   ['Belgium', 'BE', 'EUR', '€', 0.92, 0.21],
-  ['Belize', 'BZ', 'BZD', 'BZ$', 2.0, 0.12],
   ['Bhutan', 'BT', 'BTN', 'Nu.', 88.0, 0.15],
   ['Brazil', 'BR', 'BRL', 'R$', 5.65, 0.30],
   ['Canada', 'CA', 'CAD', 'CA$', 1.38, 0.15],
@@ -240,7 +229,6 @@ const GLOBAL_REST_NAMES: [string, string, string, string, number, number][] = [
   ['Greece', 'GR', 'EUR', '€', 0.92, 0.24],
   ['Hong Kong', 'HK', 'HKD', 'HK$', 7.78, 0.10],
   ['Hungary', 'HU', 'HUF', 'Ft', 365.0, 0.27],
-  ['Iceland', 'IS', 'ISK', 'kr', 137.0, 0.24],
   ['Indonesia', 'ID', 'IDR', 'Rp', 15600.0, 0.25],
   ['Ireland', 'IE', 'EUR', '€', 0.92, 0.23],
   ['Israel', 'IL', 'ILS', '₪', 3.75, 0.17],
@@ -289,10 +277,6 @@ export const ALL_METROS: (Metro & { countryId: string })[] = COUNTRIES.flatMap((
   c.metros.map((m) => ({ ...m, countryId: c.id }))
 );
 
-/* ------------------------------------------------------------------ */
-/*  Categories Config                                                 */
-/* ------------------------------------------------------------------ */
-
 export type CategoryKey = 'supercars' | 'superbikes' | 'flagships' | 'workstations';
 
 export interface CategoryInfo {
@@ -304,7 +288,7 @@ export interface CategoryInfo {
 export const CATEGORIES: CategoryInfo[] = [
   { key: 'supercars', label: 'Supercars', blurb: 'Pure performance thoroughbreds and hyper-GTs' },
   { key: 'superbikes', label: 'Superbikes', blurb: 'Track-bred litre-class hypersports and superbikes' },
-  { key: 'flagships', label: 'Flagships', blurb: 'Elite smartphones, luxury hardware and mobiles' },
+  { key: 'flagships', label: 'Flagships', blurb: 'Elite smartphones and luxury hardware' },
   { key: 'workstations', label: 'Workstations', blurb: 'Extreme computing laptops and flagship rigs' },
 ];
 
@@ -312,10 +296,6 @@ export const isCategoryKey = (k: string | null): k is CategoryKey =>
   CATEGORIES.some((c) => c.key === k);
 
 export const isVehicle = (cat: CategoryKey) => cat === 'supercars' || cat === 'superbikes';
-
-/* ------------------------------------------------------------------ */
-/*  Currency Formatter Engine                                         */
-/* ------------------------------------------------------------------ */
 
 export function formatMoney(amount: number, country: Country): string {
   if (country.id === 'IN') {
@@ -331,10 +311,6 @@ export function formatMoney(amount: number, country: Country): string {
 }
 
 export const pct = (rate: number) => `${Math.round(rate * 100)}%`;
-
-/* ------------------------------------------------------------------ */
-/*  Database Normalization Engine                                     */
-/* ------------------------------------------------------------------ */
 
 export interface RawRow {
   id: string;
@@ -422,7 +398,7 @@ export function normalizeItem(row: RawRow, table: Table): CatalogItem {
   if (row.max_power) specsList.push({ key: 'power', label: 'Horsepower', value: String(row.max_power) });
   if (row.engine_displacement) specsList.push({ key: 'engine', label: 'Displacement', value: String(row.engine_displacement) });
   if (row.engine_cc) specsList.push({ key: 'cc', label: 'Displacement', value: `${row.engine_cc} cc` });
-  if (row.bike_type) specsList.push({ key: 'type', label: 'Chassis Type', value: String(row.bike_type) });
+  if (row.bike_type) specsList.push({ key: 'type', label: 'Type', value: String(row.bike_type) });
 
   if (row.specs && typeof row.specs === 'object') {
     Object.entries(row.specs).forEach(([k, v]) => {
@@ -452,10 +428,6 @@ export function topSpecs(specs: { key: string; label: string; value: string }[],
   return specs.slice(0, count);
 }
 
-/* ------------------------------------------------------------------ */
-/*  On-Road & Tax Valuation Engine Across Any Country                 */
-/* ------------------------------------------------------------------ */
-
 export function computeOnRoad(item: CatalogItem, metro: Metro, country: Country) {
   let baseUSD = item.baseUsd;
   if (!baseUSD && item.baseInr) {
@@ -463,7 +435,6 @@ export function computeOnRoad(item: CatalogItem, metro: Metro, country: Country)
   }
   if (!baseUSD) return null;
 
-  // Convert USD base to country's local currency
   const baseLocal = baseUSD * country.exchangeRateToUSD;
   const tax = baseLocal * metro.taxRate;
   const vehicle = isVehicle(item.category);
@@ -479,10 +450,6 @@ export function computeOnRoad(item: CatalogItem, metro: Metro, country: Country)
     total,
   };
 }
-
-/* ------------------------------------------------------------------ */
-/*  Persistent Metro / Region State Hook                              */
-/* ------------------------------------------------------------------ */
 
 export function useRegion() {
   const [countryId, setCountryId] = useState<string>('IN');
