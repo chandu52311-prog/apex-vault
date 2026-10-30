@@ -197,7 +197,6 @@ export function normalizeItem(row: RawRow, table: Table): CatalogItem {
     }
   }
 
-  // Gallery array normalization
   let gallery: string[] = [];
   if (Array.isArray(row.gallery)) {
     gallery = row.gallery.filter(Boolean);
