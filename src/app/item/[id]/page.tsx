@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { COUNTRIES, formatMoney, useRegion, type Table } from '@/lib/locations';
 import { ArrowLeft, MapPin, CheckCircle2, AlertCircle, PhoneCall, ExternalLink, ShieldCheck } from 'lucide-react';
@@ -14,12 +14,11 @@ interface ColorOption {
   cities?: string[];
 }
 
-export default function ItemDetail() {
+function ItemDetailContent() {
   const params = useParams();
-  const router = useRouter();
   const { metro, country, selectCountry, selectMetro } = useRegion();
-  const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
-  const id = decodeURIComponent(rawId || '');
+  const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
+  const id = rawId ? decodeURIComponent(rawId) : '';
 
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +31,7 @@ export default function ItemDetail() {
 
   useEffect(() => {
     async function loadMachine() {
+      if (!id) return;
       setLoading(true);
       const tables: Table[] = ['cars', 'bikes', 'gadgets'];
       for (const table of tables) {
@@ -388,5 +388,13 @@ export default function ItemDetail() {
       )}
 
     </div>
+  );
+}
+
+export default function ItemDetail() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#050505] text-amber-500 flex items-center justify-center font-bold text-xs uppercase tracking-widest">Loading Machine...</div>}>
+      <ItemDetailContent />
+    </Suspense>
   );
 }
