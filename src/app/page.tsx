@@ -36,7 +36,7 @@ function CoverImage({ src, label }: { src: string | null; label: string }) {
   return (
     <img
       src={src}
-      alt=""
+      alt={label}
       loading="lazy"
       decoding="async"
       onError={() => setFailed(src)}
