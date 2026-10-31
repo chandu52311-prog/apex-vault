@@ -62,7 +62,7 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     symbol: '₹',
     vatRate: 0.28,
     regFee: 0.12,
-    cities: ['Hyderabad', 'Bangalore', 'Mumbai', 'Delhi NCR', 'Chennai'],
+    cities: ['Hyderabad', 'Bangalore', 'Mumbai', 'Delhi NCR', 'Chennai', 'Kolkata'],
   },
   US: {
     name: 'United States',
@@ -71,7 +71,7 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     symbol: '$',
     vatRate: 0.07,
     regFee: 0.03,
-    cities: ['New York, NY', 'Los Angeles, CA', 'Miami, FL'],
+    cities: ['New York, NY', 'Los Angeles, CA', 'Miami, FL', 'Dallas, TX', 'San Francisco, CA'],
   },
   AE: {
     name: 'United Arab Emirates',
@@ -80,7 +80,7 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     symbol: 'AED ',
     vatRate: 0.05,
     regFee: 0.02,
-    cities: ['Dubai', 'Abu Dhabi'],
+    cities: ['Dubai', 'Abu Dhabi', 'Sharjah'],
   },
   GB: {
     name: 'United Kingdom',
@@ -89,7 +89,106 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     symbol: '£',
     vatRate: 0.20,
     regFee: 0.05,
-    cities: ['London', 'Manchester'],
+    cities: ['London', 'Manchester', 'Birmingham', 'Edinburgh'],
+  },
+  MC: {
+    name: 'Monaco',
+    currency: 'EUR',
+    rate: 0.011,
+    symbol: '€',
+    vatRate: 0.20,
+    regFee: 0.02,
+    cities: ['Monte Carlo', 'La Condamine'],
+  },
+  CH: {
+    name: 'Switzerland',
+    currency: 'CHF',
+    rate: 0.0105,
+    symbol: 'CHF ',
+    vatRate: 0.08,
+    regFee: 0.04,
+    cities: ['Zurich', 'Geneva', 'Lugano'],
+  },
+  SG: {
+    name: 'Singapore',
+    currency: 'SGD',
+    rate: 0.016,
+    symbol: 'S$',
+    vatRate: 0.09,
+    regFee: 1.10,
+    cities: ['Singapore Central', 'Marina Bay', 'Orchard'],
+  },
+  DE: {
+    name: 'Germany',
+    currency: 'EUR',
+    rate: 0.011,
+    symbol: '€',
+    vatRate: 0.19,
+    regFee: 0.03,
+    cities: ['Munich', 'Frankfurt', 'Stuttgart', 'Berlin'],
+  },
+  SA: {
+    name: 'Saudi Arabia',
+    currency: 'SAR',
+    rate: 0.045,
+    symbol: 'SAR ',
+    vatRate: 0.15,
+    regFee: 0.02,
+    cities: ['Riyadh', 'Jeddah', 'Khobar'],
+  },
+  JP: {
+    name: 'Japan',
+    currency: 'JPY',
+    rate: 1.82,
+    symbol: '¥',
+    vatRate: 0.10,
+    regFee: 0.05,
+    cities: ['Tokyo', 'Osaka', 'Yokohama'],
+  },
+  AU: {
+    name: 'Australia',
+    currency: 'AUD',
+    rate: 0.018,
+    symbol: 'A$',
+    vatRate: 0.10,
+    regFee: 0.33,
+    cities: ['Sydney', 'Melbourne', 'Brisbane'],
+  },
+  CA: {
+    name: 'Canada',
+    currency: 'CAD',
+    rate: 0.016,
+    symbol: 'CA$',
+    vatRate: 0.13,
+    regFee: 0.05,
+    cities: ['Toronto', 'Vancouver', 'Montreal'],
+  },
+  FR: {
+    name: 'France',
+    currency: 'EUR',
+    rate: 0.011,
+    symbol: '€',
+    vatRate: 0.20,
+    regFee: 0.04,
+    cities: ['Paris', 'Nice', 'Cannes'],
+  },
+  IT: {
+    name: 'Italy',
+    currency: 'EUR',
+    rate: 0.011,
+    symbol: '€',
+    vatRate: 0.22,
+    regFee: 0.04,
+    cities: ['Milan', 'Rome', 'Bologna'],
+  },
+  QA: {
+    name: 'Qatar',
+    currency: 'QAR',
+    rate: 0.044,
+    symbol: 'QAR ',
+    vatRate: 0.05,
+    regFee: 0.02,
+    cities: ['Doha', 'Lusail'],
   },
 };
 
@@ -130,7 +229,6 @@ function ItemDetailContent() {
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [leadSubmitting, setLeadSubmitting] = useState(false);
 
-  // Fullscreen secure Lightbox states
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
 
@@ -280,7 +378,7 @@ function ItemDetailContent() {
           item_id: product.id,
           item_table: product.table,
           color: activeLabel,
-          workflow_type: activeWorkflow, // 'booking', 'test-drive', or 'insurance'
+          workflow_type: activeWorkflow,
         },
       ]);
       setLeadSubmitted(true);
@@ -290,10 +388,9 @@ function ItemDetailContent() {
       setLeadSubmitting(false);
     }
   };
-// Optional chaining (?.) use chesam to prevent null error
+
   const isAutomotive = product?.table === 'cars' || product?.table === 'bikes';
 
-  // Open safe Fullscreen Mode for Automotive vehicles only
   const openFullscreen = () => {
     if (!isAutomotive) return;
     const currentIdx = safeGallery.indexOf(activeImage);
@@ -306,11 +403,6 @@ function ItemDetailContent() {
   const prevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     setFullscreenIndex((prev) => (prev === 0 ? safeGallery.length - 1 : prev - 1));
-  };
-
-  const nextImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFullscreenIndex((prev) => (prev === safeGallery.length - 1 ? 0 : prev + 1));
   };
 
   const nextImage = (e: React.MouseEvent) => {
@@ -347,7 +439,7 @@ function ItemDetailContent() {
   return (
     <main 
       className="min-h-screen bg-black text-neutral-100 selection:bg-amber-500 selection:text-black"
-      onContextMenu={(e) => e.preventDefault()} // Block Context Menu globally for download prevention
+      onContextMenu={(e) => e.preventDefault()}
     >
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
@@ -364,7 +456,7 @@ function ItemDetailContent() {
               onChange={(e) => {
                 const newReg = e.target.value;
                 setSelectedRegion(newReg);
-                setSelectedCity(REGION_REGISTRY[newReg].cities[0]);
+                setSelectedCity(REGION_REGISTRY[newReg]?.cities[0] || '');
               }}
               className="rounded-md border border-white/15 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 outline-none focus:border-amber-400"
             >
@@ -408,7 +500,6 @@ function ItemDetailContent() {
               </h1>
             </div>
 
-            {/* Click to open secure lightbox fullscreen */}
             <div 
               onClick={openFullscreen}
               className={`relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl ${isAutomotive ? 'cursor-zoom-in hover:brightness-110' : ''}`}
@@ -418,7 +509,7 @@ function ItemDetailContent() {
                   src={activeImage}
                   alt={`${product.brand} ${product.model_name}`}
                   className="h-full w-full object-cover object-center transition-all duration-500 ease-out select-none"
-                  draggable="false" // Prevent image drag download 
+                  draggable="false"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs tracking-widest text-neutral-600 uppercase">
@@ -636,7 +727,6 @@ function ItemDetailContent() {
                 <div className="mt-6 space-y-3">
                   {isAutomotive ? (
                     <>
-                      {/* Direct Showroom Booking with door Delivery */}
                       <button
                         onClick={() => {
                           setActiveWorkflow('booking');
@@ -690,14 +780,12 @@ function ItemDetailContent() {
         </div>
       </div>
 
-      {/* FULLSCREEN SECURE CAR/BIKE LIGHTBOX VIEW (Screenshot Proof) */}
       {isFullscreen && isAutomotive && (
         <div 
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 px-4"
           onClick={closeFullscreen}
-          onContextMenu={(e) => e.preventDefault()} // Block Context Menu
+          onContextMenu={(e) => e.preventDefault()}
         >
-          {/* Close Lightbox */}
           <button 
             className="absolute top-6 right-6 text-2xl font-bold text-neutral-400 hover:text-white"
             onClick={closeFullscreen}
@@ -705,7 +793,6 @@ function ItemDetailContent() {
             &times; Close view
           </button>
 
-          {/* Secure Big view wrapper */}
           <div className="relative max-h-[80vh] max-w-full overflow-hidden select-none" onClick={(e) => e.stopPropagation()}>
             <img 
               src={safeGallery[fullscreenIndex]} 
@@ -714,7 +801,6 @@ function ItemDetailContent() {
               draggable="false"
             />
 
-            {/* Prev Image */}
             <button 
               onClick={prevImage}
               className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/55 text-white text-2xl rounded-full hover:bg-black/75 transition border border-white/5"
@@ -722,7 +808,6 @@ function ItemDetailContent() {
               &#10094;
             </button>
 
-            {/* Next Image */}
             <button 
               onClick={nextImage}
               className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/55 text-white text-2xl rounded-full hover:bg-black/75 transition border border-white/5"
@@ -731,10 +816,9 @@ function ItemDetailContent() {
             </button>
           </div>
 
-          {/* Warning notice & count */}
           <div className="mt-5 text-center pointer-events-none">
             <p className="text-xs text-neutral-400 uppercase tracking-widest font-bold">
-              {product.brand} {product.model_name}
+              {product?.brand} {product?.model_name}
             </p>
             <p className="text-[10px] text-amber-500/90 font-medium uppercase mt-1">
               Visual frame {fullscreenIndex + 1} of {safeGallery.length} • Screenshot protection is active
@@ -743,7 +827,6 @@ function ItemDetailContent() {
         </div>
       )}
 
-      {/* COMPREHENSIVE MODAL GATEWAY */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-md">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-900 p-6 shadow-2xl">
@@ -775,8 +858,8 @@ function ItemDetailContent() {
                   {activeWorkflow === 'insurance' && 'Quote Initiated'}
                 </h4>
                 <p className="mt-1 text-xs text-neutral-400">
-                  {activeWorkflow === 'booking' && `The Authorized ${product.brand} Hub in ${selectedCity} is preparing doorstep logistics for your selected finish: ${activeLabel}.`}
-                  {activeWorkflow === 'test-drive' && `Your VIP Test Drive request for ${product.brand} ${product.model_name} has been routed to the Authorized ${selectedCity} hub.`}
+                  {activeWorkflow === 'booking' && `The Authorized ${product?.brand} Hub in ${selectedCity} is preparing doorstep logistics for your selected finish: ${activeLabel}.`}
+                  {activeWorkflow === 'test-drive' && `Your VIP Test Drive request for ${product?.brand} ${product?.model_name} has been routed to the Authorized ${selectedCity} hub.`}
                   {activeWorkflow === 'insurance' && `Premium coverage evaluation is underway. Expect luxury insurer callback shortly.`}
                 </p>
                 <button
@@ -811,7 +894,7 @@ function ItemDetailContent() {
                   />
                 </div>
                 <div className="rounded-lg border border-white/5 bg-black/40 p-3 text-xs text-neutral-400 space-y-1 select-none">
-                  <p>Spec: <span className="text-white font-medium">{product.brand} {product.model_name}</span></p>
+                  <p>Spec: <span className="text-white font-medium">{product?.brand} {product?.model_name}</span></p>
                   <p>Finish: <span className="text-amber-400 font-medium">{activeLabel}</span></p>
                   <p>Authorized Delivery: <span className="text-white font-medium">{selectedCity} Hub</span></p>
                   {activeWorkflow === 'booking' && (
