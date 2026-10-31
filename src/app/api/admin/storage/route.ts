@@ -14,6 +14,7 @@ import {
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 function getAdminClient() {
   if (!supabaseUrl || !serviceRoleKey) {
@@ -30,7 +31,80 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const action = searchParams.get('action') || 'status';
 
-    // 1. Check Status
+    // 1. Audit Check: Database, Storage, and Environment Verification
+    if (action === 'audit') {
+      const auditReport: Record<string, any> = {
+        timestamp: new Date().toISOString(),
+        environment: {
+          NEXT_PUBLIC_SUPABASE_URL: !!supabaseUrl,
+          SUPABASE_SERVICE_ROLE_KEY: !!serviceRoleKey,
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: !!anonKey,
+        },
+        tables: {},
+        storage_buckets: {},
+        overall_status: 'HEALTHY',
+        issues_detected: [] as string[],
+      };
+
+      // Check Database Tables
+      const tablesToCheck = ['cars', 'bikes', 'gadgets'];
+      for (const table of tablesToCheck) {
+        try {
+          const { data, count, error } = await supabase
+            .from(table)
+            .select('id, brand, model_name, thumbnail_url, gallery, colors', { count: 'exact', head: false })
+            .limit(10);
+
+          if (error) {
+            auditReport.tables[table] = { status: 'FAILED', error: error.message };
+            auditReport.issues_detected.push(`Table ${table} query failed: ${error.message}`);
+            auditReport.overall_status = 'WARNING';
+          } else {
+            const inconsistencies: string[] = [];
+            data?.forEach((item) => {
+              if (!item.thumbnail_url) inconsistencies.push(`${item.model_name} missing thumbnail`);
+              if (!item.gallery || item.gallery.length === 0) inconsistencies.push(`${item.model_name} empty gallery`);
+            });
+
+            auditReport.tables[table] = {
+              status: 'OK',
+              total_records: count,
+              sample_checked: data?.length || 0,
+              inconsistencies,
+            };
+          }
+        } catch (err: any) {
+          auditReport.tables[table] = { status: 'EXCEPTION', error: err.message };
+          auditReport.issues_detected.push(`Exception querying table ${table}`);
+        }
+      }
+
+      // Check Storage Buckets
+      try {
+        const { data: buckets, error: bucketErr } = await supabase.storage.listBuckets();
+        if (bucketErr) {
+          auditReport.storage_buckets = { status: 'FAILED', error: bucketErr.message };
+          auditReport.issues_detected.push(`Storage check failed: ${bucketErr.message}`);
+          auditReport.overall_status = 'WARNING';
+        } else {
+          const expectedBuckets = ['vehicles', 'products', 'private-documents'];
+          const foundBuckets = buckets?.map((b) => b.id) || [];
+          const missing = expectedBuckets.filter((b) => !foundBuckets.includes(b));
+
+          auditReport.storage_buckets = {
+            status: missing.length === 0 ? 'OK' : 'MISSING_BUCKETS',
+            active_buckets: foundBuckets,
+            missing_buckets: missing,
+          };
+        }
+      } catch (err: any) {
+        auditReport.storage_buckets = { status: 'EXCEPTION', error: err.message };
+      }
+
+      return NextResponse.json(auditReport);
+    }
+
+    // 2. Storage Buckets Status
     if (action === 'status') {
       const { data: buckets, error } = await supabase.storage.listBuckets();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -46,7 +120,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 2. Direct Browser Trigger to Initialize all 10,000+ brand/model paths with .keep
+    // 3. Storage Folders Sync (.keep initialization)
     if (action === 'init') {
       const pathsToProcess: { bucket: string; dir: string }[] = [];
 
@@ -57,11 +131,7 @@ export async function GET(req: NextRequest) {
       OTHER_ELECTRONICS_CATEGORIES.forEach((cat) => pathsToProcess.push({ bucket: 'products', dir: `${cat}` }));
       PRIVATE_DOC_DIRECTORIES.forEach((doc) => pathsToProcess.push({ bucket: 'private-documents', dir: `${doc}` }));
 
-      const report = {
-        initialized: 0,
-        already_existed: 0,
-        failed: 0,
-      };
+      const report = { initialized: 0, already_existed: 0, failed: 0 };
 
       for (const item of pathsToProcess) {
         const cleanDir = item.dir.replace(/^\/+|\/+$/g, '');
