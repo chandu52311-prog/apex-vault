@@ -290,8 +290,8 @@ function ItemDetailContent() {
       setLeadSubmitting(false);
     }
   };
-
-  const isAutomotive = product.table === 'cars' || product.table === 'bikes';
+// Optional chaining (?.) use chesam to prevent null error
+  const isAutomotive = product?.table === 'cars' || product?.table === 'bikes';
 
   // Open safe Fullscreen Mode for Automotive vehicles only
   const openFullscreen = () => {
@@ -306,6 +306,11 @@ function ItemDetailContent() {
   const prevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     setFullscreenIndex((prev) => (prev === 0 ? safeGallery.length - 1 : prev - 1));
+  };
+
+  const nextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFullscreenIndex((prev) => (prev === safeGallery.length - 1 ? 0 : prev + 1));
   };
 
   const nextImage = (e: React.MouseEvent) => {
