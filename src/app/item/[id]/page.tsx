@@ -2,16 +2,15 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 
-// --- SUPABASE CLIENT ---
+export const dynamic = 'force-dynamic';
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// --- TYPES ---
 interface ColorOption {
   name: string;
   hex: string;
@@ -40,11 +39,10 @@ interface ProductItem {
   colors?: ColorOption[];
 }
 
-// --- COUNTRY & REGIONAL CURRENCY CONFIGURATION ---
 interface RegionConfig {
   name: string;
   currency: string;
-  rate: number; // Conversion from INR base
+  rate: number;
   symbol: string;
   vatRate: number;
   regFee: number;
@@ -57,8 +55,8 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     currency: 'INR',
     rate: 1,
     symbol: '₹',
-    vatRate: 0.28, // GST & Cess approx
-    regFee: 0.12,  // State RTO average
+    vatRate: 0.28,
+    regFee: 0.12,
     cities: ['Hyderabad', 'Bangalore', 'Mumbai', 'Delhi NCR', 'Chennai'],
   },
   US: {
@@ -90,7 +88,6 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
   },
 };
 
-// Angle labels for studio display
 const ANGLE_LABELS = [
   'Front 3/4 Dynamic',
   'Rear Aero & Diffuser',
@@ -105,33 +102,29 @@ function ItemDetailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const id = params?.id as string;
+  const id = (params?.id as string) || '';
   const tableParam = searchParams.get('t') as 'cars' | 'bikes' | 'gadgets' | null;
 
   const [product, setProduct] = useState<ProductItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Regional selection state
   const [selectedRegion, setSelectedRegion] = useState<string>('IN');
   const [selectedCity, setSelectedCity] = useState<string>('Hyderabad');
 
-  // Interactive gallery state
+  // Initialized safely with empty strings to prevent undefined prerender crash
   const [activeImage, setActiveImage] = useState<string>('');
   const [activeLabel, setActiveLabel] = useState<string>('');
   const [selectedColorHex, setSelectedColorHex] = useState<string>('');
 
-  // Retail Gadget Config State (RAM / SSD)
   const [selectedRam, setSelectedRam] = useState<number>(32);
   const [selectedSsd, setSelectedSsd] = useState<number>(1000);
 
-  // VIP Lead Booking Modal
   const [showModal, setShowModal] = useState(false);
   const [leadForm, setLeadForm] = useState({ name: '', phone: '' });
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [leadSubmitting, setLeadSubmitting] = useState(false);
 
-  // 1. Fetch item by route ID across cars, bikes, gadgets
   useEffect(() => {
     let isCancelled = false;
 
@@ -160,7 +153,7 @@ function ItemDetailContent() {
 
       if (found) {
         setProduct(found);
-        const initialImg = found.colors?.[0]?.image || found.thumbnail_url;
+        const initialImg = found.colors?.[0]?.image || found.thumbnail_url || '';
         setActiveImage(initialImg);
         setActiveLabel(found.colors?.[0]?.name || 'Factory Finish');
         setSelectedColorHex(found.colors?.[0]?.hex || '');
@@ -176,7 +169,6 @@ function ItemDetailContent() {
     };
   }, [id, tableParam]);
 
-  // Safe gallery computation: only URLs attached to this item
   const safeGallery = useMemo(() => {
     if (!product) return [];
     const list: string[] = [];
@@ -189,7 +181,6 @@ function ItemDetailContent() {
     return list.slice(0, 6);
   }, [product]);
 
-  // Color selection click handler
   const handleColorSelect = (color: ColorOption) => {
     setSelectedColorHex(color.hex);
     setActiveLabel(color.name);
@@ -198,7 +189,6 @@ function ItemDetailContent() {
     }
   };
 
-  // Thumbnail click handler
   const handleThumbnailClick = (imgUrl: string, idx: number) => {
     setActiveImage(imgUrl);
     const matched = product?.colors?.find((c) => c.image === imgUrl);
@@ -211,14 +201,12 @@ function ItemDetailContent() {
     }
   };
 
-  // Pricing & Taxation Calculations
   const region = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['IN'];
 
   const dynamicPricing = useMemo(() => {
     if (!product) return { base: 0, tax: 0, total: 0 };
     let baseInr = Number(product.ex_showroom_inr) || 0;
 
-    // Gadget spec config deltas
     if (product.table === 'gadgets') {
       if (selectedRam === 64) baseInr += 40000;
       if (selectedRam === 128) baseInr += 90000;
@@ -237,7 +225,6 @@ function ItemDetailContent() {
     };
   }, [product, region, selectedRam, selectedSsd]);
 
-  // Stock status logic based on selected city & finish
   const stockNotice = useMemo(() => {
     if (!product) return '';
     const currentFinish = product.colors?.find((c) => c.hex === selectedColorHex);
@@ -249,12 +236,11 @@ function ItemDetailContent() {
     }
     const hasAnyInCountry = currentFinish.cities.some((c) => region.cities.includes(c));
     if (hasAnyInCountry) {
-      return `Transit Required: Dispatches in 2–3 days to ${selectedCity}`;
+      return `Transit Required: Dispatches in 2-3 days to ${selectedCity}`;
     }
     return `Regional Import Required for ${region.name}`;
   }, [product, selectedColorHex, selectedCity, region]);
 
-  // Lead submission handler
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!leadForm.name || !leadForm.phone || !product) return;
@@ -274,7 +260,6 @@ function ItemDetailContent() {
       ]);
       setLeadSubmitted(true);
     } catch {
-      // Fallback
       setLeadSubmitted(true);
     } finally {
       setLeadSubmitting(false);
@@ -311,17 +296,15 @@ function ItemDetailContent() {
 
   return (
     <main className="min-h-screen bg-black text-neutral-100 selection:bg-amber-500 selection:text-black">
-      {/* TOP REGISTRY HEADER BAR */}
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <Link
             href="/"
             className="flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-neutral-400 transition hover:text-amber-400"
           >
-            ← Back to Vault
+            &larr; Back to Vault
           </Link>
 
-          {/* Regional Country & Metro Selector */}
           <div className="flex items-center gap-2">
             <select
               value={selectedRegion}
@@ -354,180 +337,163 @@ function ItemDetailContent() {
         </div>
       </header>
 
-      {/* PRODUCT SHOWCASE LAYOUT */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-12">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
           
-          {/* LEFT COLUMN: HERO VIEWER & VERIFIED STUDIO GALLERY */}
-          <div className="lg:col-span-7 xl:col-span-8">
-            <div className="space-y-6">
-              {/* BRAND & MODEL TITLE */}
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase text-amber-400">
-                    {product.brand}
-                  </span>
-                  <span className="text-[10px] font-semibold tracking-widest uppercase text-neutral-500">
-                    {product.tier || product.category || product.table}
-                  </span>
-                </div>
-                <h1 className="mt-1 text-2xl font-black uppercase tracking-tight text-white sm:text-4xl">
-                  {product.model_name}
-                </h1>
+          <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase text-amber-400">
+                  {product.brand}
+                </span>
+                <span className="text-[10px] font-semibold tracking-widest uppercase text-neutral-500">
+                  {product.tier || product.category || product.table}
+                </span>
               </div>
+              <h1 className="mt-1 text-2xl font-black uppercase tracking-tight text-white sm:text-4xl">
+                {product.model_name}
+              </h1>
+            </div>
 
-              {/* MAIN HERO IMAGE CONTAINER */}
-              <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl">
-                {activeImage ? (
-                  <Image
-                    src={activeImage}
-                    alt={`${product.brand} ${product.model_name}`}
-                    fill
-                    priority
-                    sizes="(max-width: 1200px) 100vw, 1200px"
-                    className="object-cover object-center transition-all duration-500 ease-out"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs tracking-widest text-neutral-600 uppercase">
-                    Authentic Asset In Verification
-                  </div>
-                )}
+            {/* HERO IMAGE: Direct <img> to prevent domain blocking */}
+            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl">
+              {activeImage ? (
+                <img
+                  src={activeImage}
+                  alt={`${product.brand} ${product.model_name}`}
+                  className="h-full w-full object-cover object-center transition-all duration-500 ease-out"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xs tracking-widest text-neutral-600 uppercase">
+                  Asset In Verification
+                </div>
+              )}
 
-                {/* Hero Badge */}
-                <div className="absolute bottom-4 left-4 rounded-lg border border-white/10 bg-black/70 px-3 py-1.5 backdrop-blur-md">
-                  <p className="text-xs font-medium tracking-wide text-amber-400">
-                    {activeLabel}
+              <div className="absolute bottom-4 left-4 rounded-lg border border-white/10 bg-black/70 px-3 py-1.5 backdrop-blur-md">
+                <p className="text-xs font-medium tracking-wide text-amber-400">
+                  {activeLabel}
+                </p>
+              </div>
+            </div>
+
+            {product.colors && product.colors.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-white/5 bg-neutral-900/50 p-4">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                    Official Bespoke Finishes
+                  </span>
+                  <p className="text-sm font-semibold text-white">{activeLabel}</p>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  {product.colors.map((c, i) => {
+                    const isSelected = selectedColorHex === c.hex;
+                    return (
+                      <button
+                        key={`${c.name}-${i}`}
+                        onClick={() => handleColorSelect(c)}
+                        title={c.name}
+                        className={`h-7 w-7 rounded-full border-2 transition-all duration-300 ${
+                          isSelected
+                            ? 'scale-110 border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)]'
+                            : 'border-transparent opacity-70 hover:opacity-100'
+                        }`}
+                        style={{ backgroundColor: c.hex }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {safeGallery.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-bold tracking-wider uppercase text-neutral-400">
+                    Studio Angles &amp; Verified Views
                   </p>
+                  <span className="text-[11px] text-neutral-500">
+                    {safeGallery.length} High-Res Frames
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-6">
+                  {safeGallery.map((url, idx) => {
+                    const isSelected = activeImage === url;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => handleThumbnailClick(url, idx)}
+                        className={`group relative aspect-[16/10] w-full overflow-hidden rounded-lg border bg-neutral-900 transition-all duration-300 ${
+                          isSelected
+                            ? 'border-amber-400 ring-2 ring-amber-400/30'
+                            : 'border-white/10 opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <img
+                          src={url}
+                          alt={`${product.model_name} frame ${idx + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+            )}
 
-              {/* FINISHES / SWATCHES BAR */}
-              {product.colors && product.colors.length > 0 && (
-                <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-white/5 bg-neutral-900/50 p-4">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                      Official Bespoke Finishes
-                    </span>
-                    <p className="text-sm font-semibold text-white">{activeLabel}</p>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    {product.colors.map((c, i) => {
-                      const isSelected = selectedColorHex === c.hex;
-                      return (
-                        <button
-                          key={`${c.name}-${i}`}
-                          onClick={() => handleColorSelect(c)}
-                          title={c.name}
-                          className={`h-7 w-7 rounded-full border-2 transition-all duration-300 ${
-                            isSelected
-                              ? 'scale-110 border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)]'
-                              : 'border-transparent opacity-70 hover:opacity-100'
-                          }`}
-                          style={{ backgroundColor: c.hex }}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 6 VERIFIED ANGLE THUMBNAILS */}
-              {safeGallery.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-bold tracking-wider uppercase text-neutral-400">
-                      Studio Angles & Verified Views
-                    </p>
-                    <span className="text-[11px] text-neutral-500">
-                      {safeGallery.length} High-Res Frames
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-6">
-                    {safeGallery.map((url, idx) => {
-                      const isSelected = activeImage === url;
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => handleThumbnailClick(url, idx)}
-                          className={`group relative aspect-[16/10] w-full overflow-hidden rounded-lg border bg-neutral-900 transition-all duration-300 ${
-                            isSelected
-                              ? 'border-amber-400 ring-2 ring-amber-400/30'
-                              : 'border-white/10 opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          <Image
-                            src={url}
-                            alt={`${product.model_name} frame ${idx + 1}`}
-                            fill
-                            sizes="(max-width: 768px) 33vw, 150px"
-                            className="object-cover"
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* TECHNICAL SPECIFICATIONS MATRIX */}
-              <div className="rounded-2xl border border-white/10 bg-neutral-900/40 p-6 backdrop-blur-sm">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400">
-                  Technical Registry & Specifications
-                </h3>
-                <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                  {isAutomotive ? (
-                    <>
-                      <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
-                        <span className="text-[10px] uppercase tracking-wider text-neutral-500">Power Output</span>
-                        <p className="mt-1 text-base font-bold text-white">{product.max_power || 'N/A'}</p>
-                      </div>
-                      <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
-                        <span className="text-[10px] uppercase tracking-wider text-neutral-500">Top Velocity</span>
-                        <p className="mt-1 text-base font-bold text-white">
-                          {product.top_speed_kmh ? `${product.top_speed_kmh} km/h` : 'N/A'}
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
-                        <span className="text-[10px] uppercase tracking-wider text-neutral-500">0–100 km/h</span>
-                        <p className="mt-1 text-base font-bold text-white">
-                          {product.zero_to_hundred_kmh ? `${product.zero_to_hundred_kmh}s` : 'N/A'}
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
-                        <span className="text-[10px] uppercase tracking-wider text-neutral-500">Displacement</span>
-                        <p className="mt-1 text-base font-bold text-white">{product.engine_displacement || 'N/A'}</p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
-                        <span className="text-[10px] uppercase tracking-wider text-neutral-500">Architecture</span>
-                        <p className="mt-1 text-base font-bold text-white">{product.category || 'Workstation'}</p>
-                      </div>
-                      <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
-                        <span className="text-[10px] uppercase tracking-wider text-neutral-500">Performance</span>
-                        <p className="mt-1 text-base font-bold text-white">{product.max_power || 'Apple Silicon / Snapdragon'}</p>
-                      </div>
-                      <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
-                        <span className="text-[10px] uppercase tracking-wider text-neutral-500">Configured RAM</span>
-                        <p className="mt-1 text-base font-bold text-white">{selectedRam} GB Unified</p>
-                      </div>
-                      <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
-                        <span className="text-[10px] uppercase tracking-wider text-neutral-500">Storage</span>
-                        <p className="mt-1 text-base font-bold text-white">{selectedSsd} GB NVMe</p>
-                      </div>
-                    </>
-                  )}
-                </div>
+            <div className="rounded-2xl border border-white/10 bg-neutral-900/40 p-6 backdrop-blur-sm">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+                Technical Registry &amp; Specifications
+              </h3>
+              <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {isAutomotive ? (
+                  <>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Power Output</span>
+                      <p className="mt-1 text-base font-bold text-white">{product.max_power || 'N/A'}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Top Velocity</span>
+                      <p className="mt-1 text-base font-bold text-white">
+                        {product.top_speed_kmh ? `${product.top_speed_kmh} km/h` : 'N/A'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">0-100 km/h</span>
+                      <p className="mt-1 text-base font-bold text-white">
+                        {product.zero_to_hundred_kmh ? `${product.zero_to_hundred_kmh}s` : 'N/A'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Displacement</span>
+                      <p className="mt-1 text-base font-bold text-white">{product.engine_displacement || 'N/A'}</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Architecture</span>
+                      <p className="mt-1 text-base font-bold text-white">{product.category || 'Workstation'}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Performance</span>
+                      <p className="mt-1 text-base font-bold text-white">{product.max_power || 'Silicon'}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Configured RAM</span>
+                      <p className="mt-1 text-base font-bold text-white">{selectedRam} GB Unified</p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Storage</span>
+                      <p className="mt-1 text-base font-bold text-white">{selectedSsd} GB NVMe</p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {/* RIGHT COLUMN: VALUATION CARD & ACTION MODE */}
           <div className="lg:col-span-5 xl:col-span-4">
             <div className="sticky top-20 space-y-6">
-              
-              {/* PRICING & REGIONAL BREAKDOWN CARD */}
               <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-6 backdrop-blur-md shadow-2xl">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                   {isAutomotive ? `Live On-Road Price in ${selectedCity}` : `Direct Retail Price (${region.name})`}
@@ -540,13 +506,11 @@ function ItemDetailContent() {
                   </span>
                 </div>
 
-                {/* Stock dispatch badge */}
                 <div className="mt-3 flex items-center gap-2 text-xs text-neutral-400">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                   {stockNotice}
                 </div>
 
-                {/* Taxation & Fee Breakdown */}
                 <div className="mt-6 space-y-2.5 border-t border-white/10 pt-4 text-xs text-neutral-400">
                   <div className="flex justify-between">
                     <span>Ex-Factory / Retail Base:</span>
@@ -556,7 +520,7 @@ function ItemDetailContent() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Estimated Regional Duties & Taxes:</span>
+                    <span>Estimated Regional Duties &amp; Taxes:</span>
                     <span className="font-medium text-white">
                       {region.symbol}
                       {dynamicPricing.tax.toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -564,7 +528,6 @@ function ItemDetailContent() {
                   </div>
                 </div>
 
-                {/* GADGET VARIANT SELECTORS (RAM / STORAGE) */}
                 {product.table === 'gadgets' && (
                   <div className="mt-6 space-y-4 border-t border-white/10 pt-4">
                     <div>
@@ -606,7 +569,6 @@ function ItemDetailContent() {
                   </div>
                 )}
 
-                {/* PRIMARY ACTION BUTTON */}
                 <div className="mt-6">
                   {isAutomotive ? (
                     <button
@@ -637,7 +599,6 @@ function ItemDetailContent() {
         </div>
       </div>
 
-      {/* VIP LEAD MODAL */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-md">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-900 p-6 shadow-2xl">
@@ -652,14 +613,14 @@ function ItemDetailContent() {
                 }}
                 className="text-neutral-400 hover:text-white"
               >
-                ✕
+                &times;
               </button>
             </div>
 
             {leadSubmitted ? (
               <div className="mt-6 text-center">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
-                  ✓
+                  &#10003;
                 </div>
                 <h4 className="mt-3 text-sm font-bold text-white">Request Dispatched</h4>
                 <p className="mt-1 text-xs text-neutral-400">
@@ -719,7 +680,6 @@ function ItemDetailContent() {
   );
 }
 
-// Default export with Suspense boundary to prevent production Next.js build failure
 export default function ItemDetailPage() {
   return (
     <Suspense
