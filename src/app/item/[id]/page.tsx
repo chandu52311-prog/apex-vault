@@ -5,11 +5,13 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 
-export const dynamic = 'force-dynamic';
-
+// --- SUPABASE CLIENT ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Force dynamic execution for Next.js build
+export const dynamic = 'force-dynamic';
 
 interface ColorOption {
   name: string;
@@ -112,7 +114,6 @@ function ItemDetailContent() {
   const [selectedRegion, setSelectedRegion] = useState<string>('IN');
   const [selectedCity, setSelectedCity] = useState<string>('Hyderabad');
 
-  // Initialized safely with empty strings to prevent undefined prerender crash
   const [activeImage, setActiveImage] = useState<string>('');
   const [activeLabel, setActiveLabel] = useState<string>('');
   const [selectedColorHex, setSelectedColorHex] = useState<string>('');
@@ -153,8 +154,8 @@ function ItemDetailContent() {
 
       if (found) {
         setProduct(found);
-        const initialImg = found.colors?.[0]?.image || found.thumbnail_url || '';
-        setActiveImage(initialImg);
+        const initialImg = found.colors?.[0]?.image || found.thumbnail_url;
+        setActiveImage(initialImg || '');
         setActiveLabel(found.colors?.[0]?.name || 'Factory Finish');
         setSelectedColorHex(found.colors?.[0]?.hex || '');
       } else {
@@ -296,6 +297,7 @@ function ItemDetailContent() {
 
   return (
     <main className="min-h-screen bg-black text-neutral-100 selection:bg-amber-500 selection:text-black">
+      {/* HEADER */}
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <Link
@@ -337,6 +339,7 @@ function ItemDetailContent() {
         </div>
       </header>
 
+      {/* SHOWCASE */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-12">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
           
@@ -355,7 +358,7 @@ function ItemDetailContent() {
               </h1>
             </div>
 
-            {/* HERO IMAGE: Direct <img> to prevent domain blocking */}
+            {/* HERO IMAGE CONTAINER: Uses standard img to avoid Next.js domain block */}
             <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl">
               {activeImage ? (
                 <img
@@ -376,6 +379,7 @@ function ItemDetailContent() {
               </div>
             </div>
 
+            {/* FINISHES */}
             {product.colors && product.colors.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-white/5 bg-neutral-900/50 p-4">
                 <div>
@@ -405,6 +409,7 @@ function ItemDetailContent() {
               </div>
             )}
 
+            {/* THUMBNAILS: Standard img tags */}
             {safeGallery.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -440,6 +445,7 @@ function ItemDetailContent() {
               </div>
             )}
 
+            {/* SPECS */}
             <div className="rounded-2xl border border-white/10 bg-neutral-900/40 p-6 backdrop-blur-sm">
               <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400">
                 Technical Registry &amp; Specifications
@@ -492,6 +498,7 @@ function ItemDetailContent() {
             </div>
           </div>
 
+          {/* VALUATION CARD */}
           <div className="lg:col-span-5 xl:col-span-4">
             <div className="sticky top-20 space-y-6">
               <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-6 backdrop-blur-md shadow-2xl">
@@ -599,6 +606,7 @@ function ItemDetailContent() {
         </div>
       </div>
 
+      {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-md">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-900 p-6 shadow-2xl">
