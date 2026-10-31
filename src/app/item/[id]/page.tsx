@@ -5,7 +5,6 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -32,10 +31,17 @@ interface ProductItem {
   zero_to_hundred_kmh?: number;
   top_speed_kmh?: number;
   base_price_usd?: number;
-  ex_showroom_inr: number;
+  price_usd?: number;
+  current_price_usd?: number;
+  ex_showroom_inr?: number;
+  current_price_inr?: number;
+  price?: number;
+  retail_price?: number;
   thumbnail_url: string;
   gallery?: string[];
   colors?: ColorOption[];
+  specs?: Record<string, any>;
+  amazon_affiliate_url?: string;
 }
 
 interface RegionConfig {
@@ -119,9 +125,14 @@ function ItemDetailContent() {
   const [selectedSsd, setSelectedSsd] = useState<number>(1000);
 
   const [showModal, setShowModal] = useState(false);
+  const [activeWorkflow, setActiveWorkflow] = useState<'booking' | 'test-drive' | 'insurance' | null>(null);
   const [leadForm, setLeadForm] = useState({ name: '', phone: '' });
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [leadSubmitting, setLeadSubmitting] = useState(false);
+
+  // Fullscreen secure Lightbox states
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenIndex, setFullscreenIndex] = useState(0);
 
   useEffect(() => {
     let isCancelled = false;
@@ -151,7 +162,12 @@ function ItemDetailContent() {
 
       if (found) {
         setProduct(found);
-        const initialImg = found.colors?.[0]?.image || found.thumbnail_url || '';
+        
+        const initialImg = 
+          found.colors?.[0]?.image || 
+          (found.gallery && found.gallery.length > 0 ? found.gallery[0] : found.thumbnail_url) || 
+          '';
+          
         setActiveImage(initialImg);
         setActiveLabel(found.colors?.[0]?.name || 'Factory Finish');
         setSelectedColorHex(found.colors?.[0]?.hex || '');
@@ -170,11 +186,14 @@ function ItemDetailContent() {
   const safeGallery = useMemo(() => {
     if (!product) return [];
     const list: string[] = [];
-    if (product.thumbnail_url) list.push(product.thumbnail_url);
+    
     if (Array.isArray(product.gallery)) {
       product.gallery.forEach((url) => {
         if (url && !list.includes(url)) list.push(url);
       });
+    }
+    if (product.thumbnail_url && !list.includes(product.thumbnail_url)) {
+      list.push(product.thumbnail_url);
     }
     return list.slice(0, 6);
   }, [product]);
@@ -194,7 +213,7 @@ function ItemDetailContent() {
       setActiveLabel(matched.name);
       setSelectedColorHex(matched.hex);
     } else {
-      setActiveLabel(ANGLE_LABELS[idx] || `Angle ${idx + 1}`);
+      setActiveLabel(ANGLE_LABELS[idx] || `Frame ${idx + 1}`);
       setSelectedColorHex('');
     }
   };
@@ -203,7 +222,14 @@ function ItemDetailContent() {
 
   const dynamicPricing = useMemo(() => {
     if (!product) return { base: 0, tax: 0, total: 0 };
-    let baseInr = Number(product.ex_showroom_inr) || 0;
+
+    let baseInr = Number(
+      product.current_price_inr ?? 
+      product.ex_showroom_inr ?? 
+      product.retail_price ?? 
+      product.price ?? 
+      0
+    );
 
     if (product.table === 'gadgets') {
       if (selectedRam === 64) baseInr += 40000;
@@ -254,6 +280,7 @@ function ItemDetailContent() {
           item_id: product.id,
           item_table: product.table,
           color: activeLabel,
+          workflow_type: activeWorkflow, // 'booking', 'test-drive', or 'insurance'
         },
       ]);
       setLeadSubmitted(true);
@@ -262,6 +289,28 @@ function ItemDetailContent() {
     } finally {
       setLeadSubmitting(false);
     }
+  };
+
+  const isAutomotive = product.table === 'cars' || product.table === 'bikes';
+
+  // Open safe Fullscreen Mode for Automotive vehicles only
+  const openFullscreen = () => {
+    if (!isAutomotive) return;
+    const currentIdx = safeGallery.indexOf(activeImage);
+    setFullscreenIndex(currentIdx >= 0 ? currentIdx : 0);
+    setIsFullscreen(true);
+  };
+
+  const closeFullscreen = () => setIsFullscreen(false);
+
+  const prevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFullscreenIndex((prev) => (prev === 0 ? safeGallery.length - 1 : prev - 1));
+  };
+
+  const nextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFullscreenIndex((prev) => (prev === safeGallery.length - 1 ? 0 : prev + 1));
   };
 
   if (loading) {
@@ -290,15 +339,16 @@ function ItemDetailContent() {
     );
   }
 
-  const isAutomotive = product.table === 'cars' || product.table === 'bikes';
-
   return (
-    <main className="min-h-screen bg-black text-neutral-100 selection:bg-amber-500 selection:text-black">
+    <main 
+      className="min-h-screen bg-black text-neutral-100 selection:bg-amber-500 selection:text-black"
+      onContextMenu={(e) => e.preventDefault()} // Block Context Menu globally for download prevention
+    >
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <Link
             href="/"
-            className="flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-neutral-400 transition hover:text-amber-400"
+            className="flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-neutral-400 transition hover:text-amber-400 animate-pulse"
           >
             &larr; Back to Vault
           </Link>
@@ -353,12 +403,17 @@ function ItemDetailContent() {
               </h1>
             </div>
 
-            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl">
+            {/* Click to open secure lightbox fullscreen */}
+            <div 
+              onClick={openFullscreen}
+              className={`relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl ${isAutomotive ? 'cursor-zoom-in hover:brightness-110' : ''}`}
+            >
               {activeImage ? (
                 <img
                   src={activeImage}
                   alt={`${product.brand} ${product.model_name}`}
-                  className="h-full w-full object-cover object-center transition-all duration-500 ease-out"
+                  className="h-full w-full object-cover object-center transition-all duration-500 ease-out select-none"
+                  draggable="false" // Prevent image drag download 
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs tracking-widest text-neutral-600 uppercase">
@@ -366,8 +421,14 @@ function ItemDetailContent() {
                 </div>
               )}
 
+              {isAutomotive && (
+                <div className="absolute top-4 right-4 rounded-lg bg-black/65 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-amber-400 backdrop-blur-md">
+                  🔍 Tap Screen For Full view
+                </div>
+              )}
+
               <div className="absolute bottom-4 left-4 rounded-lg border border-white/10 bg-black/70 px-3 py-1.5 backdrop-blur-md">
-                <p className="text-xs font-medium tracking-wide text-amber-400">
+                <p className="text-xs font-medium tracking-wide text-amber-400 select-none">
                   {activeLabel}
                 </p>
               </div>
@@ -376,10 +437,10 @@ function ItemDetailContent() {
             {product.colors && product.colors.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-white/5 bg-neutral-900/50 p-4">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 select-none">
                     Official Bespoke Finishes
                   </span>
-                  <p className="text-sm font-semibold text-white">{activeLabel}</p>
+                  <p className="text-sm font-semibold text-white select-none">{activeLabel}</p>
                 </div>
                 <div className="flex items-center gap-2.5">
                   {product.colors.map((c, i) => {
@@ -405,10 +466,10 @@ function ItemDetailContent() {
             {safeGallery.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-bold tracking-wider uppercase text-neutral-400">
+                  <p className="text-[11px] font-bold tracking-wider uppercase text-neutral-400 select-none">
                     Studio Angles &amp; Verified Views
                   </p>
-                  <span className="text-[11px] text-neutral-500">
+                  <span className="text-[11px] text-neutral-500 select-none">
                     {safeGallery.length} High-Res Frames
                   </span>
                 </div>
@@ -428,7 +489,8 @@ function ItemDetailContent() {
                         <img
                           src={url}
                           alt={`${product.model_name} frame ${idx + 1}`}
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-cover select-none"
+                          draggable="false"
                         />
                       </button>
                     );
@@ -469,11 +531,11 @@ function ItemDetailContent() {
                   <>
                     <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
                       <span className="text-[10px] uppercase tracking-wider text-neutral-500">Architecture</span>
-                      <p className="mt-1 text-base font-bold text-white">{product.category || 'Workstation'}</p>
+                      <p className="mt-1 text-base font-bold text-white">{product.specs?.processor || product.category || 'Silicon'}</p>
                     </div>
                     <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Performance</span>
-                      <p className="mt-1 text-base font-bold text-white">{product.max_power || 'Silicon'}</p>
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Display Engine</span>
+                      <p className="mt-1 text-base font-bold text-white">{product.specs?.display || 'Retina XDR'}</p>
                     </div>
                     <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
                       <span className="text-[10px] uppercase tracking-wider text-neutral-500">Configured RAM</span>
@@ -481,7 +543,7 @@ function ItemDetailContent() {
                     </div>
                     <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
                       <span className="text-[10px] uppercase tracking-wider text-neutral-500">Storage</span>
-                      <p className="mt-1 text-base font-bold text-white">{selectedSsd} GB NVMe</p>
+                      <p className="mt-1 text-base font-bold text-white">{selectedSsd >= 1000 ? `${selectedSsd / 1000} TB` : `${selectedSsd} GB`}</p>
                     </div>
                   </>
                 )}
@@ -492,18 +554,18 @@ function ItemDetailContent() {
           <div className="lg:col-span-5 xl:col-span-4">
             <div className="sticky top-20 space-y-6">
               <div className="rounded-2xl border border-white/10 bg-neutral-900/60 p-6 backdrop-blur-md shadow-2xl">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 select-none">
                   {isAutomotive ? `Live On-Road Price in ${selectedCity}` : `Direct Retail Price (${region.name})`}
                 </span>
                 
-                <div className="mt-2 flex items-baseline gap-2">
+                <div className="mt-2 flex items-baseline gap-2 select-none">
                   <span className="text-3xl font-black text-amber-400 sm:text-4xl">
                     {region.symbol}
                     {dynamicPricing.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
                 </div>
 
-                <div className="mt-3 flex items-center gap-2 text-xs text-neutral-400">
+                <div className="mt-3 flex items-center gap-2 text-xs text-neutral-400 select-none">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                   {stockNotice}
                 </div>
@@ -516,7 +578,7 @@ function ItemDetailContent() {
                       {dynamicPricing.base.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between border-b border-white/5 pb-4">
                     <span>Estimated Regional Duties &amp; Taxes:</span>
                     <span className="font-medium text-white">
                       {region.symbol}
@@ -526,7 +588,7 @@ function ItemDetailContent() {
                 </div>
 
                 {product.table === 'gadgets' && (
-                  <div className="mt-6 space-y-4 border-t border-white/10 pt-4">
+                  <div className="mt-6 space-y-4 pt-2">
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Memory</span>
                       <div className="mt-2 flex gap-2">
@@ -566,27 +628,54 @@ function ItemDetailContent() {
                   </div>
                 )}
 
-                <div className="mt-6">
+                <div className="mt-6 space-y-3">
                   {isAutomotive ? (
-                    <button
-                      onClick={() => setShowModal(true)}
-                      className="w-full rounded-xl bg-amber-400 py-3.5 text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-amber-400/20 transition hover:bg-amber-300 active:scale-[0.98]"
-                    >
-                      Book VIP Test Drive in {selectedCity}
-                    </button>
+                    <>
+                      {/* Direct Showroom Booking with door Delivery */}
+                      <button
+                        onClick={() => {
+                          setActiveWorkflow('booking');
+                          setShowModal(true);
+                        }}
+                        className="w-full rounded-xl bg-amber-400 py-3 text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-amber-400/20 transition hover:bg-amber-300 active:scale-[0.98]"
+                      >
+                        Book VIP Doorstep Delivery in {selectedCity}
+                      </button>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => {
+                            setActiveWorkflow('test-drive');
+                            setShowModal(true);
+                          }}
+                          className="rounded-xl border border-white/10 bg-white/5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-neutral-200 transition hover:bg-white/10"
+                        >
+                          Request Test Drive
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveWorkflow('insurance');
+                            setShowModal(true);
+                          }}
+                          className="rounded-xl border border-amber-500/10 bg-amber-500/5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-amber-400 transition hover:bg-amber-500/15"
+                        >
+                          Opt Luxury Insurance
+                        </button>
+                      </div>
+                    </>
                   ) : (
                     <a
-                      href="https://amazon.in"
+                      href={product.amazon_affiliate_url || 'https://amazon.in'}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex w-full items-center justify-center rounded-xl bg-amber-400 py-3.5 text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-amber-400/20 transition hover:bg-amber-300 active:scale-[0.98]"
                     >
-                      Check Deal on Amazon
+                      Check Deal on Amazon &rarr;
                     </a>
                   )}
                 </div>
 
-                <p className="mt-3 text-center text-[10px] text-neutral-500">
+                <p className="mt-4 text-center text-[9px] text-neutral-500 select-none">
                   Connected Dealership: Authorized {product.brand} Hub ({selectedCity})
                 </p>
               </div>
@@ -596,12 +685,68 @@ function ItemDetailContent() {
         </div>
       </div>
 
+      {/* FULLSCREEN SECURE CAR/BIKE LIGHTBOX VIEW (Screenshot Proof) */}
+      {isFullscreen && isAutomotive && (
+        <div 
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 px-4"
+          onClick={closeFullscreen}
+          onContextMenu={(e) => e.preventDefault()} // Block Context Menu
+        >
+          {/* Close Lightbox */}
+          <button 
+            className="absolute top-6 right-6 text-2xl font-bold text-neutral-400 hover:text-white"
+            onClick={closeFullscreen}
+          >
+            &times; Close view
+          </button>
+
+          {/* Secure Big view wrapper */}
+          <div className="relative max-h-[80vh] max-w-full overflow-hidden select-none" onClick={(e) => e.stopPropagation()}>
+            <img 
+              src={safeGallery[fullscreenIndex]} 
+              alt="Apex Fullscreen View" 
+              className="mx-auto max-h-[75vh] object-contain rounded-lg border border-white/5 shadow-2xl pointer-events-none select-none"
+              draggable="false"
+            />
+
+            {/* Prev Image */}
+            <button 
+              onClick={prevImage}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/55 text-white text-2xl rounded-full hover:bg-black/75 transition border border-white/5"
+            >
+              &#10094;
+            </button>
+
+            {/* Next Image */}
+            <button 
+              onClick={nextImage}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/55 text-white text-2xl rounded-full hover:bg-black/75 transition border border-white/5"
+            >
+              &#10095;
+            </button>
+          </div>
+
+          {/* Warning notice & count */}
+          <div className="mt-5 text-center pointer-events-none">
+            <p className="text-xs text-neutral-400 uppercase tracking-widest font-bold">
+              {product.brand} {product.model_name}
+            </p>
+            <p className="text-[10px] text-amber-500/90 font-medium uppercase mt-1">
+              Visual frame {fullscreenIndex + 1} of {safeGallery.length} • Screenshot protection is active
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* COMPREHENSIVE MODAL GATEWAY */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-md">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-900 p-6 shadow-2xl">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold uppercase tracking-wider text-white">
-                VIP Concierge Allocation
+                {activeWorkflow === 'booking' && 'VIP Showroom Booking'}
+                {activeWorkflow === 'test-drive' && 'Test Drive Booking'}
+                {activeWorkflow === 'insurance' && 'Premium Insurance Quote'}
               </h3>
               <button
                 onClick={() => {
@@ -619,15 +764,21 @@ function ItemDetailContent() {
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
                   &#10003;
                 </div>
-                <h4 className="mt-3 text-sm font-bold text-white">Request Dispatched</h4>
+                <h4 className="mt-3 text-sm font-bold text-white">
+                  {activeWorkflow === 'booking' && 'VIP Booking Request Confirmed'}
+                  {activeWorkflow === 'test-drive' && 'Test Drive Registered'}
+                  {activeWorkflow === 'insurance' && 'Quote Initiated'}
+                </h4>
                 <p className="mt-1 text-xs text-neutral-400">
-                  The Authorized {product.brand} Specialist in {selectedCity} will contact you shortly regarding the {activeLabel} allocation.
+                  {activeWorkflow === 'booking' && `The Authorized ${product.brand} Hub in ${selectedCity} is preparing doorstep logistics for your selected finish: ${activeLabel}.`}
+                  {activeWorkflow === 'test-drive' && `Your VIP Test Drive request for ${product.brand} ${product.model_name} has been routed to the Authorized ${selectedCity} hub.`}
+                  {activeWorkflow === 'insurance' && `Premium coverage evaluation is underway. Expect luxury insurer callback shortly.`}
                 </p>
                 <button
                   onClick={() => setShowModal(false)}
                   className="mt-6 w-full rounded-lg bg-amber-400 py-2.5 text-xs font-bold uppercase tracking-wider text-black"
                 >
-                  Close
+                  Close Gate &rarr;
                 </button>
               </div>
             ) : (
@@ -654,19 +805,22 @@ function ItemDetailContent() {
                     className="mt-1 w-full rounded-lg border border-white/10 bg-black px-3.5 py-2.5 text-xs text-white outline-none focus:border-amber-400"
                   />
                 </div>
-                <div className="rounded-lg border border-white/5 bg-black/40 p-3 text-xs text-neutral-400">
-                  Vehicle: <span className="text-white font-medium">{product.brand} {product.model_name}</span>
-                  <br />
-                  Selected Finish: <span className="text-amber-400 font-medium">{activeLabel}</span>
-                  <br />
-                  Hub: <span className="text-white font-medium">{selectedCity}</span>
+                <div className="rounded-lg border border-white/5 bg-black/40 p-3 text-xs text-neutral-400 space-y-1 select-none">
+                  <p>Spec: <span className="text-white font-medium">{product.brand} {product.model_name}</span></p>
+                  <p>Finish: <span className="text-amber-400 font-medium">{activeLabel}</span></p>
+                  <p>Authorized Delivery: <span className="text-white font-medium">{selectedCity} Hub</span></p>
+                  {activeWorkflow === 'booking' && (
+                    <p className="text-amber-500 font-semibold border-t border-white/5 pt-1 mt-1 text-[10px] tracking-wider uppercase">
+                      ⚠️ Doorstep Delivery Booking Fee: 2% Ex-Showroom (Secure escrow checkout in Hub)
+                    </p>
+                  )}
                 </div>
                 <button
                   type="submit"
                   disabled={leadSubmitting}
                   className="w-full rounded-lg bg-amber-400 py-3 text-xs font-bold uppercase tracking-wider text-black transition hover:bg-amber-300 disabled:opacity-50"
                 >
-                  {leadSubmitting ? 'Routing to Hub...' : 'Confirm Allocation'}
+                  {leadSubmitting ? 'Routing Secure Order...' : 'Confirm Allocation Gateway'}
                 </button>
               </form>
             )}
