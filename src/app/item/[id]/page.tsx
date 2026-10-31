@@ -5,13 +5,13 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 
+// Force dynamic execution for Next.js build
+export const dynamic = 'force-dynamic';
+
 // --- SUPABASE CLIENT ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Force dynamic execution for Next.js build
-export const dynamic = 'force-dynamic';
 
 interface ColorOption {
   name: string;
@@ -114,6 +114,7 @@ function ItemDetailContent() {
   const [selectedRegion, setSelectedRegion] = useState<string>('IN');
   const [selectedCity, setSelectedCity] = useState<string>('Hyderabad');
 
+  // Initialized safely with empty strings to avoid undefined crashes during prerendering
   const [activeImage, setActiveImage] = useState<string>('');
   const [activeLabel, setActiveLabel] = useState<string>('');
   const [selectedColorHex, setSelectedColorHex] = useState<string>('');
@@ -154,8 +155,8 @@ function ItemDetailContent() {
 
       if (found) {
         setProduct(found);
-        const initialImg = found.colors?.[0]?.image || found.thumbnail_url;
-        setActiveImage(initialImg || '');
+        const initialImg = found.colors?.[0]?.image || found.thumbnail_url || '';
+        setActiveImage(initialImg);
         setActiveLabel(found.colors?.[0]?.name || 'Factory Finish');
         setSelectedColorHex(found.colors?.[0]?.hex || '');
       } else {
@@ -358,7 +359,7 @@ function ItemDetailContent() {
               </h1>
             </div>
 
-            {/* HERO IMAGE CONTAINER: Uses standard img to avoid Next.js domain block */}
+            {/* HERO IMAGE CONTAINER: Uses HTML img tag to avoid domain blocking */}
             <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl">
               {activeImage ? (
                 <img
@@ -409,7 +410,7 @@ function ItemDetailContent() {
               </div>
             )}
 
-            {/* THUMBNAILS: Standard img tags */}
+            {/* THUMBNAILS: HTML img tags */}
             {safeGallery.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -606,7 +607,6 @@ function ItemDetailContent() {
         </div>
       </div>
 
-      {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-md">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-900 p-6 shadow-2xl">
