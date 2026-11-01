@@ -17,13 +17,14 @@ const supabase = createClient(
 );
 
 export default function HomePage() {
-  const [selectedRegion, setSelectedRegion] = useState('IN');
-  const [selectedCity, setSelectedCity] = useState('Hyderabad');
+  // Default values ni US & New York ga set chesthunnam
+  const [selectedRegion, setSelectedRegion] = useState('US');
+  const [selectedCity, setSelectedCity] = useState('New York, NY');
   const [activeTab, setActiveTab] = useState<'cars' | 'bikes' | 'gadgets'>('cars');
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Auto-Detect User's Location (Top Priority IP Geolocation)
+  // 1. Auto-Detect User's Location (User unna exact country detect chesthundi)
   useEffect(() => {
     async function detectUserLocation() {
       try {
@@ -33,6 +34,7 @@ export default function HomePage() {
         const userCountry = data.country_code;
         const userCity = data.city;
 
+        // User country code registry lo unte daaniki switch chesthundi
         if (userCountry && REGION_REGISTRY[userCountry]) {
           setSelectedRegion(userCountry);
 
@@ -41,27 +43,27 @@ export default function HomePage() {
             (c) => c.toLowerCase() === (userCity || '').toLowerCase()
           );
 
-          setSelectedCity(matchedCity || availableCities[0] || 'Hyderabad');
+          setSelectedCity(matchedCity || availableCities[0] || 'New York, NY');
         }
       } catch (err) {
-        // Fallback default safe ga IN / Hyderabad untundi
+        // IP fail aithe safe ga US / New York lone untundi
       }
     }
 
     detectUserLocation();
   }, []);
 
-  const region: RegionConfig = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['IN'] || {
-    name: 'India',
-    currency: 'INR',
-    rate: 1,
-    symbol: '₹',
-    vatRate: 0.28,
-    regFee: 0.12,
-    dialCode: '+91',
-    cities: ['Hyderabad'],
+  // Safe fallback kooda US ke link chesthunnam
+  const region: RegionConfig = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['US'] || {
+    name: 'United States',
+    currency: 'USD',
+    rate: 0.012,
+    symbol: '$',
+    vatRate: 0.07,
+    regFee: 0.03,
+    dialCode: '+1',
+    cities: ['New York, NY'],
   };
-
   useEffect(() => {
     async function fetchCatalog() {
       setLoading(true);
