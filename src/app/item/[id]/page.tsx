@@ -202,21 +202,6 @@ function ItemDetailContent() {
     };
   }, [id, tableParam]);
 
-  const region = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['IN'] || {
-    name: 'India',
-    currency: 'INR',
-    rate: 1,
-    symbol: '₹',
-    vatRate: 0.28,
-    regFee: 0.12,
-    dialCode: '+91',
-    cities: ['Hyderabad'],
-  };
-
-  useEffect(() => {
-    setLeadForm((prev) => ({ ...prev, countryCode: region.dialCode || '+91' }));
-  }, [selectedRegion, region.dialCode]);
-
   // Variant availability matrix (Gadgets)
   const availableRams: number[] = useMemo(() => {
     if (product?.specs?.available_rams && Array.isArray(product.specs.available_rams)) {
