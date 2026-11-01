@@ -17,6 +17,34 @@ export default function HomePage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 1. Auto-Detect User's Location (Top Priority IP Geolocation)
+  useEffect(() => {
+    async function detectUserLocation() {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+
+        const userCountry = data.country_code;
+        const userCity = data.city;
+
+        if (userCountry && REGION_REGISTRY[userCountry]) {
+          setSelectedRegion(userCountry);
+
+          const availableCities = REGION_REGISTRY[userCountry].cities || [];
+          const matchedCity = availableCities.find(
+            (c) => c.toLowerCase() === (userCity || '').toLowerCase()
+          );
+
+          setSelectedCity(matchedCity || availableCities[0] || 'Hyderabad');
+        }
+      } catch (err) {
+        // Fallback default safe ga IN / Hyderabad untundi
+      }
+    }
+
+    detectUserLocation();
+  }, []);
+
   const region: RegionConfig = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['IN'] || {
     name: 'India',
     currency: 'INR',
