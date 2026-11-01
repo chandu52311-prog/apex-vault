@@ -15,9 +15,6 @@ import { getDealerWhatsAppUrl } from '@/data/dealerships';
 // Google AdSense Compliance Footer
 import Footer from '@/components/Footer';
 
-// Prevents Next.js blocking prerender failure on dynamic client hooks
-export const dynamic = 'force-dynamic';
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
