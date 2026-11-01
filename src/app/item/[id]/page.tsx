@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
+import { REGION_REGISTRY, RegionConfig } from '@/data/regions';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -44,100 +45,6 @@ interface ProductItem {
   amazon_affiliate_url?: string;
   flipkart_affiliate_url?: string;
 }
-
-interface RegionConfig {
-  name: string;
-  currency: string;
-  rate: number;
-  symbol: string;
-  vatRate: number;
-  regFee: number;
-  cities: string[];
-  dialCode: string;
-}
-
-const REGION_REGISTRY: Record<string, RegionConfig> = {
-  IN: {
-    name: 'India',
-    currency: 'INR',
-    rate: 1,
-    symbol: '₹',
-    vatRate: 0.28,
-    regFee: 0.12,
-    dialCode: '+91',
-    cities: ['Hyderabad', 'Bangalore', 'Mumbai', 'Delhi NCR', 'Chennai', 'Kolkata'],
-  },
-  US: {
-    name: 'United States',
-    currency: 'USD',
-    rate: 0.012,
-    symbol: '$',
-    vatRate: 0.07,
-    regFee: 0.03,
-    dialCode: '+1',
-    cities: ['New York, NY', 'Los Angeles, CA', 'Miami, FL', 'Dallas, TX', 'San Francisco, CA'],
-  },
-  AE: {
-    name: 'United Arab Emirates',
-    currency: 'AED',
-    rate: 0.044,
-    symbol: 'AED ',
-    vatRate: 0.05,
-    regFee: 0.02,
-    dialCode: '+971',
-    cities: ['Dubai', 'Abu Dhabi', 'Sharjah'],
-  },
-  GB: {
-    name: 'United Kingdom',
-    currency: 'GBP',
-    rate: 0.0095,
-    symbol: '£',
-    vatRate: 0.20,
-    regFee: 0.05,
-    dialCode: '+44',
-    cities: ['London', 'Manchester', 'Birmingham', 'Edinburgh'],
-  },
-  DE: {
-    name: 'Germany',
-    currency: 'EUR',
-    rate: 0.011,
-    symbol: '€',
-    vatRate: 0.19,
-    regFee: 0.03,
-    dialCode: '+49',
-    cities: ['Munich', 'Frankfurt', 'Stuttgart', 'Berlin'],
-  },
-  SA: {
-    name: 'Saudi Arabia',
-    currency: 'SAR',
-    rate: 0.045,
-    symbol: 'SAR ',
-    vatRate: 0.15,
-    regFee: 0.02,
-    dialCode: '+966',
-    cities: ['Riyadh', 'Jeddah', 'Khobar'],
-  },
-  CA: {
-    name: 'Canada',
-    currency: 'CAD',
-    rate: 0.016,
-    symbol: 'CA$',
-    vatRate: 0.13,
-    regFee: 0.05,
-    dialCode: '+1',
-    cities: ['Toronto', 'Vancouver', 'Montreal'],
-  },
-  AU: {
-    name: 'Australia',
-    currency: 'AUD',
-    rate: 0.018,
-    symbol: 'A$',
-    vatRate: 0.10,
-    regFee: 0.33,
-    dialCode: '+61',
-    cities: ['Sydney', 'Melbourne', 'Brisbane'],
-  },
-};
 
 const ANGLE_LABELS = [
   'Front 3/4 Dynamic',
@@ -235,10 +142,19 @@ function ItemDetailContent() {
     };
   }, [id, tableParam]);
 
-  const region = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['IN'];
+  const region = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['IN'] || {
+    name: 'India',
+    currency: 'INR',
+    rate: 1,
+    symbol: '₹',
+    vatRate: 0.28,
+    regFee: 0.12,
+    dialCode: '+91',
+    cities: ['Hyderabad'],
+  };
 
   useEffect(() => {
-    setLeadForm((prev) => ({ ...prev, countryCode: region.dialCode }));
+    setLeadForm((prev) => ({ ...prev, countryCode: region.dialCode || '+91' }));
   }, [selectedRegion, region.dialCode]);
 
   // Variant availability matrix (Amazon / Flipkart system)
@@ -329,7 +245,7 @@ function ItemDetailContent() {
     if (currentFinish.cities.includes(selectedCity)) {
       return `In Stock: Ready for immediate allocation in ${selectedCity}`;
     }
-    const hasAnyInCountry = currentFinish.cities.some((c) => region.cities.includes(c));
+    const hasAnyInCountry = currentFinish.cities.some((c) => region.cities && region.cities.includes(c));
     if (hasAnyInCountry) {
       return `Transit Required: Dispatches in 2-3 days to ${selectedCity}`;
     }
@@ -431,7 +347,8 @@ function ItemDetailContent() {
               onChange={(e) => {
                 const newReg = e.target.value;
                 setSelectedRegion(newReg);
-                setSelectedCity(REGION_REGISTRY[newReg]?.cities[0] || '');
+                const nextRegObj = REGION_REGISTRY[newReg];
+                setSelectedCity(nextRegObj?.cities?.[0] || '');
               }}
               className="rounded-md border border-white/15 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 outline-none focus:border-amber-400"
             >
@@ -447,7 +364,7 @@ function ItemDetailContent() {
               onChange={(e) => setSelectedCity(e.target.value)}
               className="rounded-md border border-white/15 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 outline-none focus:border-amber-400"
             >
-              {region.cities.map((city) => (
+              {(region.cities || []).map((city) => (
                 <option key={city} value={city}>
                   {city}
                 </option>
@@ -840,7 +757,7 @@ function ItemDetailContent() {
         </div>
       )}
 
-      {/* OFFICIAL LUXURY MODAL WITH COUNTRY DIAL PICKER */}
+      {/* OFFICIAL LUXURY MODAL WITH DYNAMIC COUNTRY DIAL PICKER FROM REGISTRY */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-md">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-900 p-6 shadow-2xl">
@@ -908,13 +825,11 @@ function ItemDetailContent() {
                       onChange={(e) => setLeadForm({ ...leadForm, countryCode: e.target.value })}
                       className="rounded-lg border border-white/10 bg-black px-2.5 py-2.5 text-xs font-medium text-amber-400 outline-none focus:border-amber-400"
                     >
-                      <option value="+91">🇮🇳 +91</option>
-                      <option value="+1">🇺🇸 +1</option>
-                      <option value="+971">🇦🇪 +971</option>
-                      <option value="+44">🇬🇧 +44</option>
-                      <option value="+49">🇩🇪 +49</option>
-                      <option value="+966">🇸🇦 +966</option>
-                      <option value="+61">🇦🇺 +61</option>
+                      {Object.entries(REGION_REGISTRY).map(([code, r]) => (
+                        <option key={code} value={r.dialCode || '+1'}>
+                          {code} ({r.dialCode || '+1'})
+                        </option>
+                      ))}
                     </select>
 
                     <input
