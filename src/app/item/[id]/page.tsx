@@ -53,6 +53,7 @@ interface RegionConfig {
   vatRate: number;
   regFee: number;
   cities: string[];
+  dialCode: string;
 }
 
 const REGION_REGISTRY: Record<string, RegionConfig> = {
@@ -63,6 +64,7 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     symbol: '₹',
     vatRate: 0.28,
     regFee: 0.12,
+    dialCode: '+91',
     cities: ['Hyderabad', 'Bangalore', 'Mumbai', 'Delhi NCR', 'Chennai', 'Kolkata'],
   },
   US: {
@@ -72,6 +74,7 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     symbol: '$',
     vatRate: 0.07,
     regFee: 0.03,
+    dialCode: '+1',
     cities: ['New York, NY', 'Los Angeles, CA', 'Miami, FL', 'Dallas, TX', 'San Francisco, CA'],
   },
   AE: {
@@ -81,6 +84,7 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     symbol: 'AED ',
     vatRate: 0.05,
     regFee: 0.02,
+    dialCode: '+971',
     cities: ['Dubai', 'Abu Dhabi', 'Sharjah'],
   },
   GB: {
@@ -90,34 +94,8 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     symbol: '£',
     vatRate: 0.20,
     regFee: 0.05,
+    dialCode: '+44',
     cities: ['London', 'Manchester', 'Birmingham', 'Edinburgh'],
-  },
-  MC: {
-    name: 'Monaco',
-    currency: 'EUR',
-    rate: 0.011,
-    symbol: '€',
-    vatRate: 0.20,
-    regFee: 0.02,
-    cities: ['Monte Carlo', 'La Condamine'],
-  },
-  CH: {
-    name: 'Switzerland',
-    currency: 'CHF',
-    rate: 0.0105,
-    symbol: 'CHF ',
-    vatRate: 0.08,
-    regFee: 0.04,
-    cities: ['Zurich', 'Geneva', 'Lugano'],
-  },
-  SG: {
-    name: 'Singapore',
-    currency: 'SGD',
-    rate: 0.016,
-    symbol: 'S$',
-    vatRate: 0.09,
-    regFee: 1.10,
-    cities: ['Singapore Central', 'Marina Bay', 'Orchard'],
   },
   DE: {
     name: 'Germany',
@@ -126,6 +104,7 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     symbol: '€',
     vatRate: 0.19,
     regFee: 0.03,
+    dialCode: '+49',
     cities: ['Munich', 'Frankfurt', 'Stuttgart', 'Berlin'],
   },
   SA: {
@@ -135,25 +114,8 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     symbol: 'SAR ',
     vatRate: 0.15,
     regFee: 0.02,
+    dialCode: '+966',
     cities: ['Riyadh', 'Jeddah', 'Khobar'],
-  },
-  JP: {
-    name: 'Japan',
-    currency: 'JPY',
-    rate: 1.82,
-    symbol: '¥',
-    vatRate: 0.10,
-    regFee: 0.05,
-    cities: ['Tokyo', 'Osaka', 'Yokohama'],
-  },
-  AU: {
-    name: 'Australia',
-    currency: 'AUD',
-    rate: 0.018,
-    symbol: 'A$',
-    vatRate: 0.10,
-    regFee: 0.33,
-    cities: ['Sydney', 'Melbourne', 'Brisbane'],
   },
   CA: {
     name: 'Canada',
@@ -162,34 +124,18 @@ const REGION_REGISTRY: Record<string, RegionConfig> = {
     symbol: 'CA$',
     vatRate: 0.13,
     regFee: 0.05,
+    dialCode: '+1',
     cities: ['Toronto', 'Vancouver', 'Montreal'],
   },
-  FR: {
-    name: 'France',
-    currency: 'EUR',
-    rate: 0.011,
-    symbol: '€',
-    vatRate: 0.20,
-    regFee: 0.04,
-    cities: ['Paris', 'Nice', 'Cannes'],
-  },
-  IT: {
-    name: 'Italy',
-    currency: 'EUR',
-    rate: 0.011,
-    symbol: '€',
-    vatRate: 0.22,
-    regFee: 0.04,
-    cities: ['Milan', 'Rome', 'Bologna'],
-  },
-  QA: {
-    name: 'Qatar',
-    currency: 'QAR',
-    rate: 0.044,
-    symbol: 'QAR ',
-    vatRate: 0.05,
-    regFee: 0.02,
-    cities: ['Doha', 'Lusail'],
+  AU: {
+    name: 'Australia',
+    currency: 'AUD',
+    rate: 0.018,
+    symbol: 'A$',
+    vatRate: 0.10,
+    regFee: 0.33,
+    dialCode: '+61',
+    cities: ['Sydney', 'Melbourne', 'Brisbane'],
   },
 };
 
@@ -221,12 +167,12 @@ function ItemDetailContent() {
   const [activeLabel, setActiveLabel] = useState<string>('');
   const [selectedColorHex, setSelectedColorHex] = useState<string>('');
 
-  const [selectedRam, setSelectedRam] = useState<number>(32);
-  const [selectedSsd, setSelectedSsd] = useState<number>(1000);
+  const [selectedRam, setSelectedRam] = useState<number>(16);
+  const [selectedSsd, setSelectedSsd] = useState<number>(512);
 
   const [showModal, setShowModal] = useState(false);
   const [activeWorkflow, setActiveWorkflow] = useState<'booking' | 'test-drive' | 'insurance' | 'security' | null>(null);
-  const [leadForm, setLeadForm] = useState({ name: '', phone: '' });
+  const [leadForm, setLeadForm] = useState({ name: '', countryCode: '+91', phone: '' });
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [leadSubmitting, setLeadSubmitting] = useState(false);
 
@@ -270,6 +216,13 @@ function ItemDetailContent() {
         setActiveImage(initialImg);
         setActiveLabel(found.colors?.[0]?.name || 'Factory Finish');
         setSelectedColorHex(found.colors?.[0]?.hex || '');
+
+        if (found.table === 'gadgets') {
+          const availRams = found.specs?.available_rams || [16, 32];
+          const availSsds = found.specs?.available_ssds || [512, 1000];
+          setSelectedRam(availRams[0] || 16);
+          setSelectedSsd(availSsds[0] || 512);
+        }
       } else {
         setErrorMsg('Specification not found in Apex Vault Registry.');
       }
@@ -281,6 +234,27 @@ function ItemDetailContent() {
       isCancelled = true;
     };
   }, [id, tableParam]);
+
+  const region = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['IN'];
+
+  useEffect(() => {
+    setLeadForm((prev) => ({ ...prev, countryCode: region.dialCode }));
+  }, [selectedRegion, region.dialCode]);
+
+  // Variant availability matrix (Amazon / Flipkart system)
+  const availableRams: number[] = useMemo(() => {
+    if (product?.specs?.available_rams && Array.isArray(product.specs.available_rams)) {
+      return product.specs.available_rams;
+    }
+    return [16, 32, 64];
+  }, [product]);
+
+  const availableSsds: number[] = useMemo(() => {
+    if (product?.specs?.available_ssds && Array.isArray(product.specs.available_ssds)) {
+      return product.specs.available_ssds;
+    }
+    return [512, 1000, 2000];
+  }, [product]);
 
   const safeGallery = useMemo(() => {
     if (!product) return [];
@@ -317,8 +291,6 @@ function ItemDetailContent() {
     }
   };
 
-  const region = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['IN'];
-
   const dynamicPricing = useMemo(() => {
     if (!product) return { base: 0, tax: 0, total: 0 };
 
@@ -331,10 +303,10 @@ function ItemDetailContent() {
     );
 
     if (product.table === 'gadgets') {
-      if (selectedRam === 64) baseInr += 40000;
-      if (selectedRam === 128) baseInr += 90000;
-      if (selectedSsd === 2000) baseInr += 30000;
-      if (selectedSsd === 4000) baseInr += 80000;
+      if (selectedRam === 32) baseInr += 30000;
+      if (selectedRam === 64) baseInr += 70000;
+      if (selectedSsd === 1000) baseInr += 20000;
+      if (selectedSsd === 2000) baseInr += 50000;
     }
 
     const convertedBase = baseInr * region.rate;
@@ -369,11 +341,13 @@ function ItemDetailContent() {
     if (!leadForm.name || !leadForm.phone || !product) return;
     setLeadSubmitting(true);
 
+    const fullPhone = `${leadForm.countryCode} ${leadForm.phone}`;
+
     try {
       await supabase.from('leads').insert([
         {
           name: leadForm.name,
-          phone: leadForm.phone,
+          phone: fullPhone,
           city: selectedCity,
           model: `${product.brand} ${product.model_name}`,
           item_id: product.id,
@@ -628,14 +602,14 @@ function ItemDetailContent() {
                   <>
                     <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
                       <span className="text-[10px] uppercase tracking-wider text-neutral-500">Architecture</span>
-                      <p className="mt-1 text-base font-bold text-white">{product.specs?.processor || product.category || 'Silicon'}</p>
+                      <p className="mt-1 text-base font-bold text-white">{product.specs?.processor || product.category || 'Apple M-Series Silicon'}</p>
                     </div>
                     <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
                       <span className="text-[10px] uppercase tracking-wider text-neutral-500">Display Engine</span>
-                      <p className="mt-1 text-base font-bold text-white">{product.specs?.display || 'Retina XDR'}</p>
+                      <p className="mt-1 text-base font-bold text-white">{product.specs?.display || 'Liquid Retina XDR'}</p>
                     </div>
                     <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Configured RAM</span>
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Selected RAM</span>
                       <p className="mt-1 text-base font-bold text-white">{selectedRam} GB Unified</p>
                     </div>
                     <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
@@ -684,42 +658,58 @@ function ItemDetailContent() {
                   </div>
                 </div>
 
+                {/* GADGET DYNAMIC HARDWARE SELECTION (AMAZON / FLIPKART STYLE) */}
                 {product.table === 'gadgets' && (
                   <div className="mt-6 space-y-4 pt-2">
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Memory</span>
                       <div className="mt-2 flex gap-2">
-                        {[16, 32, 64].map((ram) => (
-                          <button
-                            key={ram}
-                            onClick={() => setSelectedRam(ram)}
-                            className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition ${
-                              selectedRam === ram
-                                ? 'border-amber-400 bg-amber-400/10 text-amber-400'
-                                : 'border-white/10 text-neutral-400 hover:border-white/25'
-                            }`}
-                          >
-                            {ram} GB
-                          </button>
-                        ))}
+                        {[16, 32, 64].map((ram) => {
+                          const isAvailable = availableRams.includes(ram);
+                          const isSelected = selectedRam === ram;
+                          return (
+                            <button
+                              key={ram}
+                              disabled={!isAvailable}
+                              onClick={() => setSelectedRam(ram)}
+                              className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition ${
+                                !isAvailable
+                                  ? 'cursor-not-allowed border-white/5 bg-neutral-900/30 text-neutral-600 line-through opacity-40'
+                                  : isSelected
+                                  ? 'border-amber-400 bg-amber-400/10 text-amber-400 ring-1 ring-amber-400/30'
+                                  : 'border-white/10 text-neutral-400 hover:border-white/25 hover:text-white'
+                              }`}
+                            >
+                              {ram} GB
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
+
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Solid State Drive</span>
                       <div className="mt-2 flex gap-2">
-                        {[512, 1000, 2000].map((ssd) => (
-                          <button
-                            key={ssd}
-                            onClick={() => setSelectedSsd(ssd)}
-                            className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition ${
-                              selectedSsd === ssd
-                                ? 'border-amber-400 bg-amber-400/10 text-amber-400'
-                                : 'border-white/10 text-neutral-400 hover:border-white/25'
-                            }`}
-                          >
-                            {ssd >= 1000 ? `${ssd / 1000} TB` : `${ssd} GB`}
-                          </button>
-                        ))}
+                        {[512, 1000, 2000].map((ssd) => {
+                          const isAvailable = availableSsds.includes(ssd);
+                          const isSelected = selectedSsd === ssd;
+                          return (
+                            <button
+                              key={ssd}
+                              disabled={!isAvailable}
+                              onClick={() => setSelectedSsd(ssd)}
+                              className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition ${
+                                !isAvailable
+                                  ? 'cursor-not-allowed border-white/5 bg-neutral-900/30 text-neutral-600 line-through opacity-40'
+                                  : isSelected
+                                  ? 'border-amber-400 bg-amber-400/10 text-amber-400 ring-1 ring-amber-400/30'
+                                  : 'border-white/10 text-neutral-400 hover:border-white/25 hover:text-white'
+                              }`}
+                            >
+                              {ssd >= 1000 ? `${ssd / 1000} TB` : `${ssd} GB`}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -729,7 +719,6 @@ function ItemDetailContent() {
                 <div className="mt-6 space-y-2.5">
                   {isAutomotive ? (
                     <>
-                      {/* 1. VIP Showroom Booking */}
                       <button
                         onClick={() => {
                           setActiveWorkflow('booking');
@@ -740,7 +729,6 @@ function ItemDetailContent() {
                         VIP Showroom Booking Allocation
                       </button>
 
-                      {/* 2 & 3. Test Drive and Luxury Insurance in Grid */}
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => {
@@ -762,7 +750,6 @@ function ItemDetailContent() {
                         </button>
                       </div>
 
-                      {/* 4. VIP Security & Anti-Theft */}
                       <button
                         onClick={() => {
                           setActiveWorkflow('security');
@@ -775,7 +762,6 @@ function ItemDetailContent() {
                     </>
                   ) : (
                     <>
-                      {/* Amazon Store Button */}
                       <a
                         href={product.amazon_affiliate_url || 'https://amazon.in'}
                         target="_blank"
@@ -785,7 +771,6 @@ function ItemDetailContent() {
                         Buy on Amazon (Official Store Deal) &rarr;
                       </a>
 
-                      {/* Flipkart / Card Deals Button */}
                       <a
                         href={product.flipkart_affiliate_url || product.specs?.flipkart_url || 'https://flipkart.com'}
                         target="_blank"
@@ -855,6 +840,7 @@ function ItemDetailContent() {
         </div>
       )}
 
+      {/* OFFICIAL LUXURY MODAL WITH COUNTRY DIAL PICKER */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-md">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-900 p-6 shadow-2xl">
@@ -907,23 +893,41 @@ function ItemDetailContent() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Chandu"
+                    placeholder="Enter your official full name"
                     value={leadForm.name}
                     onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-black px-3.5 py-2.5 text-xs text-white outline-none focus:border-amber-400"
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-black px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 outline-none focus:border-amber-400"
                   />
                 </div>
+
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Contact Number</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="+91 98765 43210"
-                    value={leadForm.phone}
-                    onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-black px-3.5 py-2.5 text-xs text-white outline-none focus:border-amber-400"
-                  />
+                  <div className="mt-1 flex gap-2">
+                    <select
+                      value={leadForm.countryCode}
+                      onChange={(e) => setLeadForm({ ...leadForm, countryCode: e.target.value })}
+                      className="rounded-lg border border-white/10 bg-black px-2.5 py-2.5 text-xs font-medium text-amber-400 outline-none focus:border-amber-400"
+                    >
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+971">🇦🇪 +971</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+49">🇩🇪 +49</option>
+                      <option value="+966">🇸🇦 +966</option>
+                      <option value="+61">🇦🇺 +61</option>
+                    </select>
+
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Enter mobile number"
+                      value={leadForm.phone}
+                      onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
+                      className="w-full rounded-lg border border-white/10 bg-black px-3.5 py-2.5 text-xs text-white placeholder-neutral-600 outline-none focus:border-amber-400"
+                    />
+                  </div>
                 </div>
+
                 <div className="rounded-lg border border-white/5 bg-black/40 p-3 text-xs text-neutral-400 space-y-1 select-none">
                   <p>Spec: <span className="text-white font-medium">{product?.brand} {product?.model_name}</span></p>
                   <p>Finish: <span className="text-amber-400 font-medium">{activeLabel}</span></p>
@@ -934,6 +938,7 @@ function ItemDetailContent() {
                     </p>
                   )}
                 </div>
+
                 <button
                   type="submit"
                   disabled={leadSubmitting}
