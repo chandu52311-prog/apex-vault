@@ -76,8 +76,9 @@ function ItemDetailContent() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const [selectedRegion, setSelectedRegion] = useState<string>('IN');
-  const [selectedCity, setSelectedCity] = useState<string>('Hyderabad');
+  // 1. Default Location set to US / New York
+  const [selectedRegion, setSelectedRegion] = useState<string>('US');
+  const [selectedCity, setSelectedCity] = useState<string>('New York, NY');
 
   const [activeImage, setActiveImage] = useState<string>('');
   const [activeLabel, setActiveLabel] = useState<string>('');
@@ -93,14 +94,14 @@ function ItemDetailContent() {
 
   const [showModal, setShowModal] = useState(false);
   const [activeWorkflow, setActiveWorkflow] = useState<'booking' | 'test-drive' | 'insurance' | 'security' | null>(null);
-  const [leadForm, setLeadForm] = useState({ name: '', countryCode: '+91', phone: '' });
+  const [leadForm, setLeadForm] = useState({ name: '', countryCode: '+1', phone: '' });
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [leadSubmitting, setLeadSubmitting] = useState(false);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
 
-  // 1. IP Geolocation Auto-Detection
+  // 2. IP Geolocation Auto-Detection with US / New York Fallback
   useEffect(() => {
     async function detectUserLocation() {
       try {
@@ -118,17 +119,33 @@ function ItemDetailContent() {
             (c) => c.toLowerCase() === (userCity || '').toLowerCase()
           );
 
-          setSelectedCity(matchedCity || availableCities[0] || 'Hyderabad');
+          setSelectedCity(matchedCity || availableCities[0] || 'New York, NY');
         }
       } catch (err) {
-        // Fallback default safe ga IN / Hyderabad
+        // Fallback default safe ga US / New York untundi
       }
     }
 
     detectUserLocation();
   }, []);
 
-  // 2. Existing Product Loader (Supabase Data Fetching)
+  // 3. Region fallback bound to US
+  const region = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['US'] || {
+    name: 'United States',
+    currency: 'USD',
+    rate: 0.012,
+    symbol: '$',
+    vatRate: 0.07,
+    regFee: 0.03,
+    dialCode: '+1',
+    cities: ['New York, NY'],
+  };
+
+  useEffect(() => {
+    setLeadForm((prev) => ({ ...prev, countryCode: region.dialCode || '+1' }));
+  }, [selectedRegion, region.dialCode]);
+
+  // 4. Product Loader (Supabase Data Fetching)
   useEffect(() => {
     let isCancelled = false;
 
