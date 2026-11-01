@@ -4,7 +4,16 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
+
+// 5 Dedicated Modular Data Architecture Imports
 import { REGION_REGISTRY, RegionConfig } from '@/data/regions';
+import { AFFILIATE_CONFIG } from '@/data/affiliates';
+import { calculateMonthlyEMI } from '@/data/finance';
+import { SECURITY_PACKAGES } from '@/data/securityPackages';
+import { getDealerWhatsAppUrl } from '@/data/dealerships';
+
+// Google AdSense Compliance Footer
+import Footer from '@/components/Footer';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -77,6 +86,11 @@ function ItemDetailContent() {
   const [selectedRam, setSelectedRam] = useState<number>(16);
   const [selectedSsd, setSelectedSsd] = useState<number>(512);
 
+  // Security Armor Package Selection State
+  const [selectedSecurityPkg, setSelectedSecurityPkg] = useState<string>(
+    SECURITY_PACKAGES && SECURITY_PACKAGES.length > 0 ? SECURITY_PACKAGES[0].id : ''
+  );
+
   const [showModal, setShowModal] = useState(false);
   const [activeWorkflow, setActiveWorkflow] = useState<'booking' | 'test-drive' | 'insurance' | 'security' | null>(null);
   const [leadForm, setLeadForm] = useState({ name: '', countryCode: '+91', phone: '' });
@@ -86,7 +100,7 @@ function ItemDetailContent() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
 
-  // 1. IP Geolocation Auto-Detection (Top Priority User Location)
+  // 1. IP Geolocation Auto-Detection
   useEffect(() => {
     async function detectUserLocation() {
       try {
@@ -107,7 +121,7 @@ function ItemDetailContent() {
           setSelectedCity(matchedCity || availableCities[0] || 'Hyderabad');
         }
       } catch (err) {
-        // Fallback default safe ga IN / Hyderabad untundi
+        // Fallback default safe ga IN / Hyderabad
       }
     }
 
@@ -186,7 +200,7 @@ function ItemDetailContent() {
     setLeadForm((prev) => ({ ...prev, countryCode: region.dialCode || '+91' }));
   }, [selectedRegion, region.dialCode]);
 
-  // Variant availability matrix (Amazon / Flipkart system)
+  // Variant availability matrix (Gadgets)
   const availableRams: number[] = useMemo(() => {
     if (product?.specs?.available_rams && Array.isArray(product.specs.available_rams)) {
       return product.specs.available_rams;
@@ -236,8 +250,9 @@ function ItemDetailContent() {
     }
   };
 
+  // Dynamic Pricing + Modular EMI Calculation
   const dynamicPricing = useMemo(() => {
-    if (!product) return { base: 0, tax: 0, total: 0 };
+    if (!product) return { base: 0, tax: 0, total: 0, emiMonthly: 0 };
 
     let baseInr = Number(
       product.current_price_inr ?? 
@@ -258,10 +273,14 @@ function ItemDetailContent() {
     const tax = convertedBase * (region.vatRate + region.regFee);
     const total = convertedBase + tax;
 
+    // Monthly EMI from dedicated finance file
+    const emiMonthly = calculateMonthlyEMI(total);
+
     return {
       base: convertedBase,
       tax,
       total,
+      emiMonthly,
     };
   }, [product, region, selectedRam, selectedSsd]);
 
@@ -299,6 +318,7 @@ function ItemDetailContent() {
           item_table: product.table,
           color: activeLabel,
           workflow_type: activeWorkflow,
+          security_package: activeWorkflow === 'security' ? selectedSecurityPkg : null,
         },
       ]);
       setLeadSubmitted(true);
@@ -310,6 +330,13 @@ function ItemDetailContent() {
   };
 
   const isAutomotive = product?.table === 'cars' || product?.table === 'bikes';
+
+  // Instant Dealership WhatsApp Concierge Trigger
+  const triggerWhatsAppConcierge = () => {
+    if (!product) return;
+    const url = getDealerWhatsAppUrl(selectedCity, product.brand, product.model_name, activeLabel);
+    window.open(url, '_blank');
+  };
 
   const openFullscreen = () => {
     if (!isAutomotive) return;
@@ -582,6 +609,16 @@ function ItemDetailContent() {
                   </span>
                 </div>
 
+                {/* Modular EMI Breakdown */}
+                {isAutomotive && (
+                  <div className="mt-2.5 flex items-center justify-between rounded-lg border border-white/5 bg-black/40 px-3 py-2 text-xs">
+                    <span className="text-neutral-400">Estimated Vault EMI:</span>
+                    <span className="font-bold text-amber-400">
+                      {region.symbol}{dynamicPricing.emiMonthly.toLocaleString()}/mo
+                    </span>
+                  </div>
+                )}
+
                 <div className="mt-3 flex items-center gap-2 text-xs text-neutral-400 select-none">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                   {stockNotice}
@@ -604,7 +641,7 @@ function ItemDetailContent() {
                   </div>
                 </div>
 
-                {/* GADGET DYNAMIC HARDWARE SELECTION (AMAZON / FLIPKART STYLE) */}
+                {/* GADGET DYNAMIC HARDWARE SELECTION */}
                 {product.table === 'gadgets' && (
                   <div className="mt-6 space-y-4 pt-2">
                     <div>
@@ -708,8 +745,9 @@ function ItemDetailContent() {
                     </>
                   ) : (
                     <>
+                      {/* Dynamic Affiliate Network Integration */}
                       <a
-                        href={product.amazon_affiliate_url || 'https://amazon.in'}
+                        href={product.amazon_affiliate_url || `https://amazon.in?tag=${AFFILIATE_CONFIG.amazonTag}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex w-full items-center justify-center rounded-xl bg-amber-400 py-3.5 text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-amber-400/20 transition hover:bg-amber-300 active:scale-[0.98]"
@@ -718,7 +756,7 @@ function ItemDetailContent() {
                       </a>
 
                       <a
-                        href={product.flipkart_affiliate_url || product.specs?.flipkart_url || 'https://flipkart.com'}
+                        href={product.flipkart_affiliate_url || `https://flipkart.com?affid=${AFFILIATE_CONFIG.flipkartTrackingId}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex w-full items-center justify-center rounded-xl border border-white/20 bg-neutral-900 py-3 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-neutral-800 active:scale-[0.98]"
@@ -786,7 +824,7 @@ function ItemDetailContent() {
         </div>
       )}
 
-      {/* OFFICIAL LUXURY MODAL WITH DYNAMIC COUNTRY DIAL PICKER FROM REGISTRY */}
+      {/* OFFICIAL LUXURY MODAL WITH SECURITY TIER SELECTOR & WHATSAPP DESK */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-md">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-900 p-6 shadow-2xl">
@@ -809,25 +847,34 @@ function ItemDetailContent() {
             </div>
 
             {leadSubmitted ? (
-              <div className="mt-6 text-center">
+              <div className="mt-6 text-center space-y-4">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
                   &#10003;
                 </div>
-                <h4 className="mt-3 text-sm font-bold text-white">
+                <h4 className="text-sm font-bold text-white">
                   {activeWorkflow === 'booking' && 'VIP Booking Request Confirmed'}
                   {activeWorkflow === 'test-drive' && 'Test Drive Registered'}
                   {activeWorkflow === 'insurance' && 'Quote Initiated'}
                   {activeWorkflow === 'security' && 'Security System Allocation Requested'}
                 </h4>
-                <p className="mt-1 text-xs text-neutral-400">
+                <p className="text-xs text-neutral-400">
                   {activeWorkflow === 'booking' && `The Authorized ${product?.brand} Hub in ${selectedCity} is preparing doorstep logistics for your selected finish: ${activeLabel}.`}
                   {activeWorkflow === 'test-drive' && `Your VIP Test Drive request for ${product?.brand} ${product?.model_name} has been routed to the Authorized ${selectedCity} hub.`}
                   {activeWorkflow === 'insurance' && `Premium coverage evaluation is underway. Expect luxury insurer callback shortly.`}
                   {activeWorkflow === 'security' && `Authorized security engineers will contact you regarding tracker and immobilizer integration in ${selectedCity}.`}
                 </p>
+
+                {/* Instant Dealership WhatsApp Concierge Gateway */}
+                <button
+                  onClick={triggerWhatsAppConcierge}
+                  className="w-full rounded-xl bg-emerald-500 py-3 text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 active:scale-[0.98]"
+                >
+                  Connect via Dealership WhatsApp &rarr;
+                </button>
+
                 <button
                   onClick={() => setShowModal(false)}
-                  className="mt-6 w-full rounded-lg bg-amber-400 py-2.5 text-xs font-bold uppercase tracking-wider text-black"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 py-2.5 text-xs font-semibold text-neutral-300 hover:bg-white/10"
                 >
                   Close Gate &rarr;
                 </button>
@@ -872,6 +919,37 @@ function ItemDetailContent() {
                   </div>
                 </div>
 
+                {/* VIP Security Armor Addon Tier Picker */}
+                {activeWorkflow === 'security' && (
+                  <div className="space-y-2 pt-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Select Armor Tier</label>
+                    <div className="space-y-1.5">
+                      {SECURITY_PACKAGES.map((pkg) => (
+                        <label 
+                          key={pkg.id} 
+                          className={`flex items-center justify-between rounded-lg border p-2 text-xs cursor-pointer transition ${
+                            selectedSecurityPkg === pkg.id 
+                              ? 'border-amber-400 bg-amber-400/10 text-white' 
+                              : 'border-white/10 bg-black/30 text-neutral-400'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="radio" 
+                              name="sec-pkg"
+                              checked={selectedSecurityPkg === pkg.id}
+                              onChange={() => setSelectedSecurityPkg(pkg.id)}
+                              className="accent-amber-400"
+                            />
+                            <span>{pkg.title}</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-amber-400">{pkg.badge}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="rounded-lg border border-white/5 bg-black/40 p-3 text-xs text-neutral-400 space-y-1 select-none">
                   <p>Spec: <span className="text-white font-medium">{product?.brand} {product?.model_name}</span></p>
                   <p>Finish: <span className="text-amber-400 font-medium">{activeLabel}</span></p>
@@ -895,6 +973,9 @@ function ItemDetailContent() {
           </div>
         </div>
       )}
+
+      {/* Google AdSense Compliant Global Footer */}
+      <Footer />
     </main>
   );
 }
