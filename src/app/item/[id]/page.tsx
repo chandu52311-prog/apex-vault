@@ -333,7 +333,6 @@ function ItemDetailContent() {
 
   const isAutomotive = product?.table === 'cars' || product?.table === 'bikes';
 
-  // Instant Dealership WhatsApp Concierge Trigger
  // Instant Dealership WhatsApp Concierge Trigger
   const triggerWhatsAppConcierge = () => {
     if (!product) return;
