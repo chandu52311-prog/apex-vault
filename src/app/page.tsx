@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
-import { GLOBAL_REGIONS } from '@/lib/regions';
+import { REGION_REGISTRY, RegionConfig } from '@/data/regions';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -17,7 +17,16 @@ export default function HomePage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const region = GLOBAL_REGIONS[selectedRegion] || GLOBAL_REGIONS['IN'];
+  const region: RegionConfig = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['IN'] || {
+    name: 'India',
+    currency: 'INR',
+    rate: 1,
+    symbol: '₹',
+    vatRate: 0.28,
+    regFee: 0.12,
+    dialCode: '+91',
+    cities: ['Hyderabad'],
+  };
 
   useEffect(() => {
     async function fetchCatalog() {
@@ -48,11 +57,14 @@ export default function HomePage() {
             onChange={(e) => {
               const code = e.target.value;
               setSelectedRegion(code);
-              setSelectedCity(GLOBAL_REGIONS[code].cities[0]);
+              const nextCities = REGION_REGISTRY[code]?.cities;
+              if (nextCities && nextCities.length > 0) {
+                setSelectedCity(nextCities[0]);
+              }
             }}
             className="rounded border border-white/15 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-200 outline-none focus:border-amber-400"
           >
-            {Object.entries(GLOBAL_REGIONS).map(([code, r]) => (
+            {Object.entries(REGION_REGISTRY).map(([code, r]) => (
               <option key={code} value={code}>
                 {r.name} ({r.currency})
               </option>
@@ -64,7 +76,7 @@ export default function HomePage() {
             onChange={(e) => setSelectedCity(e.target.value)}
             className="rounded border border-white/15 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-200 outline-none focus:border-amber-400"
           >
-            {region.cities.map((c) => (
+            {(region.cities || []).map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
