@@ -15,6 +15,9 @@ import { getDealerWhatsAppUrl } from '@/data/dealerships';
 // Google AdSense Compliance Footer
 import Footer from '@/components/Footer';
 
+// Prevents Next.js blocking prerender failure on dynamic client hooks
+export const dynamic = 'force-dynamic';
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -76,7 +79,7 @@ function ItemDetailContent() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // 1. Default Location set to US / New York
+  // 1. Default Location set to US / New York (Global Luxury Standard)
   const [selectedRegion, setSelectedRegion] = useState<string>('US');
   const [selectedCity, setSelectedCity] = useState<string>('New York, NY');
 
@@ -122,15 +125,15 @@ function ItemDetailContent() {
           setSelectedCity(matchedCity || availableCities[0] || 'New York, NY');
         }
       } catch (err) {
-        // Fallback default safe ga US / New York untundi
+        // Fallback safe default: US / New York
       }
     }
 
     detectUserLocation();
   }, []);
 
-  // 3. Region fallback bound to US
-  const region = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['US'] || {
+  // 3. Region Registry fallback bound to US
+  const region: RegionConfig = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['US'] || {
     name: 'United States',
     currency: 'USD',
     rate: 0.012,
@@ -275,7 +278,7 @@ function ItemDetailContent() {
     const tax = convertedBase * (region.vatRate + region.regFee);
     const total = convertedBase + tax;
 
-    // Monthly EMI from dedicated finance file
+    // Monthly EMI calculated from dedicated finance model
     const emiMonthly = calculateMonthlyEMI(total);
 
     return {
@@ -302,6 +305,7 @@ function ItemDetailContent() {
     return `Regional Import Required for ${region.name}`;
   }, [product, selectedColorHex, selectedCity, region]);
 
+  // Lead submission with full TypeScript safe null checks
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!leadForm.name || !leadForm.phone || !product) return;
@@ -333,17 +337,18 @@ function ItemDetailContent() {
 
   const isAutomotive = product?.table === 'cars' || product?.table === 'bikes';
 
-// Instant Dealership WhatsApp Concierge Trigger
+  // Instant Dealership WhatsApp Concierge Trigger with safe fallbacks
   const triggerWhatsAppConcierge = () => {
     if (!product) return;
     const url = getDealerWhatsAppUrl(
       selectedCity, 
-      product.brand || 'Luxury Model', 
-      product.model_name || 'Vehicle', 
-      activeLabel || 'Factory Finish'
+      product?.brand ?? 'Luxury Model', 
+      product?.model_name ?? 'Vehicle', 
+      activeLabel ?? 'Factory Finish'
     );
     window.open(url, '_blank');
   };
+
   const openFullscreen = () => {
     if (!isAutomotive) return;
     const currentIdx = safeGallery.indexOf(activeImage);
@@ -991,7 +996,10 @@ export default function ItemDetailPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-black text-amber-500">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+            <p className="text-xs font-semibold tracking-widest uppercase">Loading Registry Blueprint...</p>
+          </div>
         </div>
       }
     >
