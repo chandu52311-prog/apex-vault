@@ -26,6 +26,24 @@ export interface Country {
 // 1. TIER 1 PRIORITY LUXURY MARKETS
 const TIER_1_COUNTRIES: Country[] = [
   {
+    id: 'US',
+    name: 'United States',
+    currency: 'USD',
+    symbol: '$',
+    taxLabel: 'State Sales Tax',
+    insuranceRate: 0.03,
+    exchangeRateToUSD: 1.0,
+    isTier1: true,
+    metros: [
+      { id: 'us-nyc', name: 'New York, NY', taxRate: 0.088 },
+      { id: 'us-lax', name: 'Los Angeles, CA', taxRate: 0.095 },
+      { id: 'us-mia', name: 'Miami, FL', taxRate: 0.07 },
+      { id: 'us-atx', name: 'Austin, TX', taxRate: 0.0625 },
+      { id: 'us-sfo', name: 'San Francisco, CA', taxRate: 0.086 },
+      { id: 'us-las', name: 'Las Vegas, NV', taxRate: 0.083 },
+    ],
+  },
+  {
     id: 'IN',
     name: 'India',
     currency: 'INR',
@@ -43,24 +61,6 @@ const TIER_1_COUNTRIES: Country[] = [
       { id: 'in-kol', name: 'Kolkata', taxRate: 0.18 },
       { id: 'in-ahd', name: 'Ahmedabad', taxRate: 0.17 },
       { id: 'in-pun', name: 'Pune', taxRate: 0.19 },
-    ],
-  },
-  {
-    id: 'US',
-    name: 'United States',
-    currency: 'USD',
-    symbol: '$',
-    taxLabel: 'State Sales Tax',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 1.0,
-    isTier1: true,
-    metros: [
-      { id: 'us-lax', name: 'Los Angeles, CA', taxRate: 0.095 },
-      { id: 'us-mia', name: 'Miami, FL', taxRate: 0.07 },
-      { id: 'us-nyc', name: 'New York, NY', taxRate: 0.088 },
-      { id: 'us-atx', name: 'Austin, TX', taxRate: 0.0625 },
-      { id: 'us-sfo', name: 'San Francisco, CA', taxRate: 0.086 },
-      { id: 'us-las', name: 'Las Vegas, NV', taxRate: 0.083 },
     ],
   },
   {
@@ -298,6 +298,7 @@ export const isCategoryKey = (k: string | null): k is CategoryKey =>
 export const isVehicle = (cat: CategoryKey) => cat === 'supercars' || cat === 'superbikes';
 
 export function formatMoney(amount: number, country: Country): string {
+  if (!country) return `$${Math.round(amount).toLocaleString()}`;
   if (country.id === 'IN') {
     if (amount >= 10000000) {
       return `₹${(amount / 10000000).toFixed(2)} Cr`;
@@ -307,7 +308,7 @@ export function formatMoney(amount: number, country: Country): string {
     }
     return `₹${Math.round(amount).toLocaleString('en-IN')}`;
   }
-  return `${country.symbol}${Math.round(amount).toLocaleString()}`;
+  return `${country.symbol || '$'}${Math.round(amount).toLocaleString()}`;
 }
 
 export const pct = (rate: number) => `${Math.round(rate * 100)}%`;
@@ -428,41 +429,47 @@ export function topSpecs(specs: { key: string; label: string; value: string }[],
   return specs.slice(0, count);
 }
 
-export function computeOnRoad(item: CatalogItem, metro: Metro, country: Country) {
+export function computeOnRoad(item: CatalogItem, metro?: Metro, country?: Country) {
+  const c = country || COUNTRIES[0];
+  const m = metro || c.metros[0] || { id: 'default', name: 'Standard Metro', taxRate: 0.1 };
+
   let baseUSD = item.baseUsd;
   if (!baseUSD && item.baseInr) {
     baseUSD = item.baseInr / 88.0;
   }
   if (!baseUSD) return null;
 
-  const baseLocal = baseUSD * country.exchangeRateToUSD;
-  const tax = baseLocal * metro.taxRate;
+  const baseLocal = baseUSD * c.exchangeRateToUSD;
+  const tax = baseLocal * m.taxRate;
   const vehicle = isVehicle(item.category);
-  const insurance = vehicle ? baseLocal * country.insuranceRate : 0;
+  const insurance = vehicle ? baseLocal * c.insuranceRate : 0;
   const total = baseLocal + tax + insurance;
 
   return {
     base: baseLocal,
     tax,
-    taxRate: metro.taxRate,
+    taxRate: m.taxRate,
     insurance,
-    insuranceRate: country.insuranceRate,
+    insuranceRate: c.insuranceRate,
     total,
   };
 }
 
 export function useRegion() {
-  const [countryId, setCountryId] = useState<string>('IN');
-  const [metroId, setMetroId] = useState<string>('in-hyd');
+  // Default to US & New York (International Luxury Standard)
+  const [countryId, setCountryId] = useState<string>('US');
+  const [metroId, setMetroId] = useState<string>('us-nyc');
 
   useEffect(() => {
-    const savedCountry = localStorage.getItem('apex_selected_country');
-    const savedMetro = localStorage.getItem('apex_selected_metro');
-    if (savedCountry && COUNTRY_INDEX[savedCountry]) {
-      setCountryId(savedCountry);
-    }
-    if (savedMetro) {
-      setMetroId(savedMetro);
+    if (typeof window !== 'undefined') {
+      const savedCountry = localStorage.getItem('apex_selected_country');
+      const savedMetro = localStorage.getItem('apex_selected_metro');
+      if (savedCountry && COUNTRY_INDEX[savedCountry]) {
+        setCountryId(savedCountry);
+      }
+      if (savedMetro) {
+        setMetroId(savedMetro);
+      }
     }
   }, []);
 
@@ -472,18 +479,26 @@ export function useRegion() {
       setCountryId(cId);
       const defaultMetro = found.metros[0]?.id || '';
       setMetroId(defaultMetro);
-      localStorage.setItem('apex_selected_country', cId);
-      localStorage.setItem('apex_selected_metro', defaultMetro);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('apex_selected_country', cId);
+        localStorage.setItem('apex_selected_metro', defaultMetro);
+      }
     }
   };
 
   const selectMetro = (mId: string) => {
     setMetroId(mId);
-    localStorage.setItem('apex_selected_metro', mId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('apex_selected_metro', mId);
+    }
   };
 
   const country = COUNTRY_INDEX[countryId] || COUNTRIES[0];
-  const metro = country.metros.find((m) => m.id === metroId) || country.metros[0];
+  const metro = country.metros.find((m) => m.id === metroId) || country.metros[0] || {
+    id: 'us-nyc',
+    name: 'New York, NY',
+    taxRate: 0.088,
+  };
 
   return { country, metro, selectCountry, selectMetro };
 }
