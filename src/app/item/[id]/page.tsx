@@ -86,6 +86,35 @@ function ItemDetailContent() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
 
+  // 1. IP Geolocation Auto-Detection (Top Priority User Location)
+  useEffect(() => {
+    async function detectUserLocation() {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+
+        const userCountry = data.country_code;
+        const userCity = data.city;
+
+        if (userCountry && REGION_REGISTRY[userCountry]) {
+          setSelectedRegion(userCountry);
+
+          const availableCities = REGION_REGISTRY[userCountry].cities || [];
+          const matchedCity = availableCities.find(
+            (c) => c.toLowerCase() === (userCity || '').toLowerCase()
+          );
+
+          setSelectedCity(matchedCity || availableCities[0] || 'Hyderabad');
+        }
+      } catch (err) {
+        // Fallback default safe ga IN / Hyderabad untundi
+      }
+    }
+
+    detectUserLocation();
+  }, []);
+
+  // 2. Existing Product Loader (Supabase Data Fetching)
   useEffect(() => {
     let isCancelled = false;
 
