@@ -42,6 +42,7 @@ interface ProductItem {
   colors?: ColorOption[];
   specs?: Record<string, any>;
   amazon_affiliate_url?: string;
+  flipkart_affiliate_url?: string;
 }
 
 interface RegionConfig {
@@ -224,7 +225,7 @@ function ItemDetailContent() {
   const [selectedSsd, setSelectedSsd] = useState<number>(1000);
 
   const [showModal, setShowModal] = useState(false);
-  const [activeWorkflow, setActiveWorkflow] = useState<'booking' | 'test-drive' | 'insurance' | null>(null);
+  const [activeWorkflow, setActiveWorkflow] = useState<'booking' | 'test-drive' | 'insurance' | 'security' | null>(null);
   const [leadForm, setLeadForm] = useState({ name: '', phone: '' });
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [leadSubmitting, setLeadSubmitting] = useState(false);
@@ -724,9 +725,11 @@ function ItemDetailContent() {
                   </div>
                 )}
 
-                <div className="mt-6 space-y-3">
+                {/* DYNAMIC ACTION GATEWAYS */}
+                <div className="mt-6 space-y-2.5">
                   {isAutomotive ? (
                     <>
+                      {/* 1. VIP Showroom Booking */}
                       <button
                         onClick={() => {
                           setActiveWorkflow('booking');
@@ -734,16 +737,17 @@ function ItemDetailContent() {
                         }}
                         className="w-full rounded-xl bg-amber-400 py-3 text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-amber-400/20 transition hover:bg-amber-300 active:scale-[0.98]"
                       >
-                        Book VIP Doorstep Delivery in {selectedCity}
+                        VIP Showroom Booking Allocation
                       </button>
 
+                      {/* 2 & 3. Test Drive and Luxury Insurance in Grid */}
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => {
                             setActiveWorkflow('test-drive');
                             setShowModal(true);
                           }}
-                          className="rounded-xl border border-white/10 bg-white/5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-neutral-200 transition hover:bg-white/10"
+                          className="rounded-xl border border-white/10 bg-white/5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-neutral-200 transition hover:bg-white/10 active:scale-[0.98]"
                         >
                           Request Test Drive
                         </button>
@@ -752,21 +756,45 @@ function ItemDetailContent() {
                             setActiveWorkflow('insurance');
                             setShowModal(true);
                           }}
-                          className="rounded-xl border border-amber-500/10 bg-amber-500/5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-amber-400 transition hover:bg-amber-500/15"
+                          className="rounded-xl border border-amber-500/20 bg-amber-500/5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-amber-400 transition hover:bg-amber-500/15 active:scale-[0.98]"
                         >
                           Opt Luxury Insurance
                         </button>
                       </div>
+
+                      {/* 4. VIP Security & Anti-Theft */}
+                      <button
+                        onClick={() => {
+                          setActiveWorkflow('security');
+                          setShowModal(true);
+                        }}
+                        className="w-full rounded-xl border border-amber-500/30 bg-amber-950/20 py-2.5 text-[10px] font-bold uppercase tracking-widest text-amber-400 transition hover:bg-amber-900/30 active:scale-[0.98]"
+                      >
+                        VIP Security &amp; Anti-Theft Protection
+                      </button>
                     </>
                   ) : (
-                    <a
-                      href={product.amazon_affiliate_url || 'https://amazon.in'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex w-full items-center justify-center rounded-xl bg-amber-400 py-3.5 text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-amber-400/20 transition hover:bg-amber-300 active:scale-[0.98]"
-                    >
-                      Check Deal on Amazon &rarr;
-                    </a>
+                    <>
+                      {/* Amazon Store Button */}
+                      <a
+                        href={product.amazon_affiliate_url || 'https://amazon.in'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex w-full items-center justify-center rounded-xl bg-amber-400 py-3.5 text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-amber-400/20 transition hover:bg-amber-300 active:scale-[0.98]"
+                      >
+                        Buy on Amazon (Official Store Deal) &rarr;
+                      </a>
+
+                      {/* Flipkart / Card Deals Button */}
+                      <a
+                        href={product.flipkart_affiliate_url || product.specs?.flipkart_url || 'https://flipkart.com'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex w-full items-center justify-center rounded-xl border border-white/20 bg-neutral-900 py-3 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-neutral-800 active:scale-[0.98]"
+                      >
+                        Buy on Flipkart (Card Deals) &rarr;
+                      </a>
+                    </>
                   )}
                 </div>
 
@@ -835,6 +863,7 @@ function ItemDetailContent() {
                 {activeWorkflow === 'booking' && 'VIP Showroom Booking'}
                 {activeWorkflow === 'test-drive' && 'Test Drive Booking'}
                 {activeWorkflow === 'insurance' && 'Premium Insurance Quote'}
+                {activeWorkflow === 'security' && 'VIP Security & Anti-Theft Setup'}
               </h3>
               <button
                 onClick={() => {
@@ -856,11 +885,13 @@ function ItemDetailContent() {
                   {activeWorkflow === 'booking' && 'VIP Booking Request Confirmed'}
                   {activeWorkflow === 'test-drive' && 'Test Drive Registered'}
                   {activeWorkflow === 'insurance' && 'Quote Initiated'}
+                  {activeWorkflow === 'security' && 'Security System Allocation Requested'}
                 </h4>
                 <p className="mt-1 text-xs text-neutral-400">
                   {activeWorkflow === 'booking' && `The Authorized ${product?.brand} Hub in ${selectedCity} is preparing doorstep logistics for your selected finish: ${activeLabel}.`}
                   {activeWorkflow === 'test-drive' && `Your VIP Test Drive request for ${product?.brand} ${product?.model_name} has been routed to the Authorized ${selectedCity} hub.`}
                   {activeWorkflow === 'insurance' && `Premium coverage evaluation is underway. Expect luxury insurer callback shortly.`}
+                  {activeWorkflow === 'security' && `Authorized security engineers will contact you regarding tracker and immobilizer integration in ${selectedCity}.`}
                 </p>
                 <button
                   onClick={() => setShowModal(false)}
