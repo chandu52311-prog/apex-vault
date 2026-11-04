@@ -64,11 +64,20 @@ export default function HomePage() {
     dialCode: '+1',
     cities: ['New York, NY'],
   };
+
+  // Fixed Catalog Fetching based on activeTab (Prevents Data Mixing)
   useEffect(() => {
     async function fetchCatalog() {
       setLoading(true);
-      const { data } = await supabase.from(activeTab).select('*');
-      if (data) setItems(data);
+      const { data, error } = await supabase
+        .from(activeTab)
+        .select('*');
+      
+      if (data && !error) {
+        setItems(data);
+      } else {
+        setItems([]);
+      }
       setLoading(false);
     }
     fetchCatalog();
