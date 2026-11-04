@@ -5,14 +5,12 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 
-// 5 Dedicated Modular Data Architecture Imports
 import { REGION_REGISTRY, RegionConfig } from '@/data/regions';
 import { AFFILIATE_CONFIG } from '@/data/affiliates';
 import { calculateMonthlyEMI } from '@/data/finance';
 import { SECURITY_PACKAGES } from '@/data/securityPackages';
 import { getDealerWhatsAppUrl } from '@/data/dealerships';
 
-// Google AdSense Compliance Footer
 import Footer from '@/components/Footer';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -76,7 +74,6 @@ function ItemDetailContent() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // 1. Default Location set to US / New York (Global Luxury Standard)
   const [selectedRegion, setSelectedRegion] = useState<string>('US');
   const [selectedCity, setSelectedCity] = useState<string>('New York, NY');
 
@@ -87,7 +84,6 @@ function ItemDetailContent() {
   const [selectedRam, setSelectedRam] = useState<number>(16);
   const [selectedSsd, setSelectedSsd] = useState<number>(512);
 
-  // Security Armor Package Selection State
   const [selectedSecurityPkg, setSelectedSecurityPkg] = useState<string>(
     SECURITY_PACKAGES && SECURITY_PACKAGES.length > 0 ? SECURITY_PACKAGES[0].id : ''
   );
@@ -101,35 +97,29 @@ function ItemDetailContent() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
 
-  // 2. IP Geolocation Auto-Detection with US / New York Fallback
   useEffect(() => {
     async function detectUserLocation() {
       try {
         const res = await fetch('https://ipapi.co/json/');
         const data = await res.json();
-
         const userCountry = data.country_code;
         const userCity = data.city;
 
         if (userCountry && REGION_REGISTRY[userCountry]) {
           setSelectedRegion(userCountry);
-
           const availableCities = REGION_REGISTRY[userCountry].cities || [];
           const matchedCity = availableCities.find(
             (c) => c.toLowerCase() === (userCity || '').toLowerCase()
           );
-
           setSelectedCity(matchedCity || availableCities[0] || 'New York, NY');
         }
       } catch (err) {
-        // IP fail aithe safe ga US / New York lone untundi
+        // Fallback
       }
     }
-
     detectUserLocation();
   }, []);
 
-  // 3. Region Registry fallback bound to US
   const region: RegionConfig = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['US'] || {
     name: 'United States',
     currency: 'USD',
@@ -145,7 +135,6 @@ function ItemDetailContent() {
     setLeadForm((prev) => ({ ...prev, countryCode: region.dialCode || '+1' }));
   }, [selectedRegion, region.dialCode]);
 
-  // 4. Product Loader (Fixed Exact Table Query & State Cleanup for Gallery Mismatch)
   useEffect(() => {
     let isCancelled = false;
 
@@ -163,7 +152,6 @@ function ItemDetailContent() {
       setActiveLabel('');
       setSelectedColorHex('');
 
-      // Loop teesivesi direct ga tableParam dwara exact table nunchi fetch chesthundi
       const { data, error } = await supabase
         .from(tableParam)
         .select('*')
@@ -178,7 +166,8 @@ function ItemDetailContent() {
         
         const initialImg = 
           found.colors?.[0]?.image || 
-          (found.gallery && found.gallery.length > 0 ? found.gallery[0] : found.thumbnail_url) || 
+          found.thumbnail_url || 
+          (found.gallery && found.gallery.length > 0 ? found.gallery[0] : '') || 
           '';
           
         setActiveImage(initialImg);
@@ -203,7 +192,6 @@ function ItemDetailContent() {
     };
   }, [id, tableParam]);
 
-  // Variant availability matrix (Gadgets)
   const availableRams: number[] = useMemo(() => {
     if (product?.specs?.available_rams && Array.isArray(product.specs.available_rams)) {
       return product.specs.available_rams;
@@ -222,6 +210,10 @@ function ItemDetailContent() {
     if (!product) return [];
     const list: string[] = [];
     
+    if (product.thumbnail_url) {
+      list.push(product.thumbnail_url);
+    }
+
     if (Array.isArray(product.gallery)) {
       product.gallery.forEach((url) => {
         if (url && typeof url === 'string' && !list.includes(url)) {
@@ -229,11 +221,17 @@ function ItemDetailContent() {
         }
       });
     }
-    if (product.thumbnail_url && !list.includes(product.thumbnail_url)) {
-      list.unshift(product.thumbnail_url);
+
+    if (Array.isArray(product.colors)) {
+      product.colors.forEach((c) => {
+        if (c.image && !list.includes(c.image)) {
+          list.push(c.image);
+        }
+      });
     }
-    return list.slice(0, 6);
-  }, [product?.id, product?.gallery, product?.thumbnail_url]);
+
+    return Array.from(new Set(list)).slice(0, 8);
+  }, [product?.id, product?.thumbnail_url, product?.gallery, product?.colors]);
 
   const handleColorSelect = (color: ColorOption) => {
     setSelectedColorHex(color.hex);
@@ -255,7 +253,6 @@ function ItemDetailContent() {
     }
   };
 
-  // Dynamic Pricing + Modular EMI Calculation
   const dynamicPricing = useMemo(() => {
     if (!product) return { base: 0, tax: 0, total: 0, emiMonthly: 0 };
 
@@ -277,8 +274,6 @@ function ItemDetailContent() {
     const convertedBase = baseInr * region.rate;
     const tax = convertedBase * (region.vatRate + region.regFee);
     const total = convertedBase + tax;
-
-    // Monthly EMI calculated from dedicated finance model
     const emiMonthly = calculateMonthlyEMI(total);
 
     return {
@@ -305,7 +300,6 @@ function ItemDetailContent() {
     return `Regional Import Required for ${region.name}`;
   }, [product, selectedColorHex, selectedCity, region]);
 
-  // Lead submission with full TypeScript safe null checks
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!leadForm.name || !leadForm.phone || !product) return;
@@ -337,7 +331,6 @@ function ItemDetailContent() {
 
   const isAutomotive = product?.table === 'cars' || product?.table === 'bikes';
 
-  // Instant Dealership WhatsApp Concierge Trigger with safe fallbacks
   const triggerWhatsAppConcierge = () => {
     if (!product) return;
     const url = getDealerWhatsAppUrl(
