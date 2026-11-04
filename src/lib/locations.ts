@@ -1,52 +1,51 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { REGION_REGISTRY, RegionConfig } from './regions';
+import { COUNTRIES, COUNTRY_INDEX, Country, Metro } from './regions';
 
-export function useGlobalLocation() {
-  const [selectedRegion, setSelectedRegion] = useState<string>('US');
-  const [selectedCity, setSelectedCity] = useState<string>('New York, NY');
+export function useRegion() {
+  const [countryId, setCountryId] = useState<string>('US');
+  const [metroId, setMetroId] = useState<string>('us-nyc');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedCountry = localStorage.getItem('apex_selected_country');
-      const savedCity = localStorage.getItem('apex_selected_city');
-      if (savedCountry && REGION_REGISTRY[savedCountry]) {
-        setSelectedRegion(savedCountry);
+      const savedMetro = localStorage.getItem('apex_selected_metro');
+      if (savedCountry && COUNTRY_INDEX[savedCountry]) {
+        setCountryId(savedCountry);
       }
-      if (savedCity) {
-        setSelectedCity(savedCity);
+      if (savedMetro) {
+        setMetroId(savedMetro);
       }
     }
   }, []);
 
-  const selectRegion = (code: string) => {
-    const reg = REGION_REGISTRY[code];
-    if (reg) {
-      setSelectedRegion(code);
-      const defaultCity = reg.cities[0] || '';
-      setSelectedCity(defaultCity);
+  const selectCountry = (cId: string) => {
+    const found = COUNTRY_INDEX[cId];
+    if (found) {
+      setCountryId(cId);
+      const defaultMetro = found.metros[0]?.id || '';
+      setMetroId(defaultMetro);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('apex_selected_country', code);
-        localStorage.setItem('apex_selected_city', defaultCity);
+        localStorage.setItem('apex_selected_country', cId);
+        localStorage.setItem('apex_selected_metro', defaultMetro);
       }
     }
   };
 
-  const selectCity = (city: string) => {
-    setSelectedCity(city);
+  const selectMetro = (mId: string) => {
+    setMetroId(mId);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('apex_selected_city', city);
+      localStorage.setItem('apex_selected_metro', mId);
     }
   };
 
-  const region: RegionConfig = REGION_REGISTRY[selectedRegion] || REGION_REGISTRY['US'];
-
-  return {
-    selectedRegion,
-    selectedCity,
-    region,
-    selectRegion,
-    selectCity,
+  const country = COUNTRY_INDEX[countryId] || COUNTRIES[0];
+  const metro = country.metros.find((m) => m.id === metroId) || country.metros[0] || {
+    id: 'us-nyc',
+    name: 'New York, NY',
+    taxRate: 0.088,
   };
+
+  return { country, metro, selectCountry, selectMetro };
 }
