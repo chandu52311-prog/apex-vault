@@ -1,5 +1,25 @@
+'use client';
+
 export type Table = 'cars' | 'bikes' | 'gadgets';
 export const TABLES: Table[] = ['cars', 'bikes', 'gadgets'];
+
+export type CategoryKey = 'supercars' | 'superbikes' | 'flagships' | 'workstations';
+
+export interface CategoryInfo {
+  key: CategoryKey;
+  label: string;
+  blurb: string;
+}
+
+export const CATEGORIES: CategoryInfo[] = [
+  { key: 'supercars', label: 'Supercars', blurb: 'Pure performance thoroughbreds and hyper-GTs' },
+  { key: 'superbikes', label: 'Superbikes', blurb: 'Track-bred litre-class hypersports and superbikes' },
+  { key: 'flagships', label: 'Flagships', blurb: 'Elite smartphones and luxury hardware' },
+  { key: 'workstations', label: 'Workstations', blurb: 'Extreme computing laptops and flagship rigs' },
+];
+
+export const isCategoryKey = (k: string | null): k is CategoryKey =>
+  CATEGORIES.some((c) => c.key === k);
 
 export interface Metro {
   id: string;
@@ -19,9 +39,63 @@ export interface Country {
   metros: Metro[];
 }
 
-// FULL GLOBAL COUNTRIES REGISTRY (FROM AFGHANISTAN TO VIETNAM WITH CAPITALS & HUBS)
-export const COUNTRIES: Country[] = [
-  // --- TIER 1 PRIORITY LUXURY MARKETS ---
+export interface RegionConfig {
+  name: string;
+  currency: string;
+  rate: number;
+  symbol: string;
+  vatRate: number;
+  regFee: number;
+  dialCode: string;
+  cities: string[];
+}
+
+// Global Region Registry for simple component selectors
+export const REGION_REGISTRY: Record<string, RegionConfig> = {
+  US: {
+    name: 'United States',
+    currency: 'USD',
+    rate: 1.0,
+    symbol: '$',
+    vatRate: 0.088,
+    regFee: 0.03,
+    dialCode: '+1',
+    cities: ['New York, NY', 'Los Angeles, CA', 'Miami, FL', 'Austin, TX', 'San Francisco, CA', 'Las Vegas, NV'],
+  },
+  IN: {
+    name: 'India',
+    currency: 'INR',
+    rate: 0.011,
+    symbol: '₹',
+    vatRate: 0.18,
+    regFee: 0.12,
+    dialCode: '+91',
+    cities: ['Hyderabad', 'Bangalore', 'Mumbai', 'Delhi NCR', 'Chennai', 'Kolkata', 'Ahmedabad', 'Pune'],
+  },
+  AE: {
+    name: 'United Arab Emirates',
+    currency: 'AED',
+    rate: 0.27,
+    symbol: 'AED ',
+    vatRate: 0.05,
+    regFee: 0.02,
+    dialCode: '+971',
+    cities: ['Dubai', 'Abu Dhabi', 'Sharjah'],
+  },
+  GB: {
+    name: 'United Kingdom',
+    currency: 'GBP',
+    rate: 1.28,
+    symbol: '£',
+    vatRate: 0.20,
+    regFee: 0.05,
+    dialCode: '+44',
+    cities: ['London', 'Manchester', 'Birmingham', 'Edinburgh'],
+  },
+};
+
+// Full Detailed Countries Registry for advanced computations
+const TIER_1_COUNTRIES: Country[] = [
   {
     id: 'US',
     name: 'United States',
@@ -35,9 +109,6 @@ export const COUNTRIES: Country[] = [
       { id: 'us-nyc', name: 'New York, NY', taxRate: 0.088 },
       { id: 'us-lax', name: 'Los Angeles, CA', taxRate: 0.095 },
       { id: 'us-mia', name: 'Miami, FL', taxRate: 0.07 },
-      { id: 'us-atx', name: 'Austin, TX', taxRate: 0.0625 },
-      { id: 'us-sfo', name: 'San Francisco, CA', taxRate: 0.086 },
-      { id: 'us-las', name: 'Las Vegas, NV', taxRate: 0.083 },
     ],
   },
   {
@@ -50,366 +121,17 @@ export const COUNTRIES: Country[] = [
     exchangeRateToUSD: 88.0,
     isTier1: true,
     metros: [
-      { id: 'in-hyd', name: 'Hyderabad (Telangana)', taxRate: 0.18 },
-      { id: 'in-blr', name: 'Bangalore (Karnataka)', taxRate: 0.19 },
-      { id: 'in-bom', name: 'Mumbai (Maharashtra)', taxRate: 0.20 },
+      { id: 'in-hyd', name: 'Hyderabad', taxRate: 0.18 },
+      { id: 'in-blr', name: 'Bangalore', taxRate: 0.19 },
+      { id: 'in-bom', name: 'Mumbai', taxRate: 0.20 },
       { id: 'in-del', name: 'Delhi NCR', taxRate: 0.17 },
-      { id: 'in-maa', name: 'Chennai (Tamil Nadu)', taxRate: 0.18 },
-      { id: 'in-kol', name: 'Kolkata (West Bengal)', taxRate: 0.18 },
-      { id: 'in-ahd', name: 'Ahmedabad (Gujarat)', taxRate: 0.17 },
-      { id: 'in-pun', name: 'Pune (Maharashtra)', taxRate: 0.19 },
-    ],
-  },
-  {
-    id: 'AE',
-    name: 'United Arab Emirates',
-    currency: 'AED',
-    symbol: 'AED ',
-    taxLabel: 'Import VAT & Reg',
-    insuranceRate: 0.025,
-    exchangeRateToUSD: 3.67,
-    isTier1: true,
-    metros: [
-      { id: 'ae-dxb', name: 'Dubai', taxRate: 0.05 },
-      { id: 'ae-auh', name: 'Abu Dhabi', taxRate: 0.05 },
-      { id: 'ae-shj', name: 'Sharjah', taxRate: 0.05 },
-    ],
-  },
-  {
-    id: 'GB',
-    name: 'United Kingdom',
-    currency: 'GBP',
-    symbol: '£',
-    taxLabel: 'VAT & Road Tax',
-    insuranceRate: 0.04,
-    exchangeRateToUSD: 0.78,
-    isTier1: true,
-    metros: [
-      { id: 'gb-lon', name: 'London', taxRate: 0.20 },
-      { id: 'gb-man', name: 'Manchester', taxRate: 0.20 },
-      { id: 'gb-bhm', name: 'Birmingham', taxRate: 0.20 },
-    ],
-  },
-  {
-    id: 'MC',
-    name: 'Monaco',
-    currency: 'EUR',
-    symbol: '€',
-    taxLabel: 'TVA Luxe',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 0.92,
-    isTier1: true,
-    metros: [{ id: 'mc-mte', name: 'Monte Carlo', taxRate: 0.20 }],
-  },
-  {
-    id: 'DE',
-    name: 'Germany',
-    currency: 'EUR',
-    symbol: '€',
-    taxLabel: 'MwSt & KFZ-Steuer',
-    insuranceRate: 0.032,
-    exchangeRateToUSD: 0.92,
-    isTier1: true,
-    metros: [
-      { id: 'de-muc', name: 'Munich', taxRate: 0.19 },
-      { id: 'de-fra', name: 'Frankfurt', taxRate: 0.19 },
-      { id: 'de-ber', name: 'Berlin', taxRate: 0.19 },
-    ],
-  },
-  {
-    id: 'SA',
-    name: 'Saudi Arabia',
-    currency: 'SAR',
-    symbol: 'SAR ',
-    taxLabel: 'VAT & Customs',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 3.75,
-    isTier1: true,
-    metros: [
-      { id: 'sa-ruh', name: 'Riyadh', taxRate: 0.15 },
-      { id: 'sa-jed', name: 'Jeddah', taxRate: 0.15 },
-    ],
-  },
-  {
-    id: 'SG',
-    name: 'Singapore',
-    currency: 'SGD',
-    symbol: 'S$',
-    taxLabel: 'COE & ARF Duty',
-    insuranceRate: 0.025,
-    exchangeRateToUSD: 1.34,
-    isTier1: true,
-    metros: [{ id: 'sg-sin', name: 'Singapore Central', taxRate: 1.10 }],
-  },
-  {
-    id: 'CH',
-    name: 'Switzerland',
-    currency: 'CHF',
-    symbol: 'CHF ',
-    taxLabel: 'Automobilsteuer & MWST',
-    insuranceRate: 0.028,
-    exchangeRateToUSD: 0.88,
-    isTier1: true,
-    metros: [
-      { id: 'ch-zrh', name: 'Zurich', taxRate: 0.12 },
-      { id: 'ch-gva', name: 'Geneva', taxRate: 0.12 },
-    ],
-  },
-  {
-    id: 'JP',
-    name: 'Japan',
-    currency: 'JPY',
-    symbol: '¥',
-    taxLabel: 'Automobile Acquisition Tax',
-    insuranceRate: 0.025,
-    exchangeRateToUSD: 152.0,
-    isTier1: true,
-    metros: [
-      { id: 'jp-tyo', name: 'Tokyo', taxRate: 0.10 },
-      { id: 'jp-osa', name: 'Osaka', taxRate: 0.10 },
-    ],
-  },
-  {
-    id: 'AU',
-    name: 'Australia',
-    currency: 'AUD',
-    symbol: 'A$',
-    taxLabel: 'Luxury Car Tax (LCT)',
-    insuranceRate: 0.035,
-    exchangeRateToUSD: 1.52,
-    isTier1: true,
-    metros: [
-      { id: 'au-syd', name: 'Sydney, NSW', taxRate: 0.33 },
-      { id: 'au-mel', name: 'Melbourne, VIC', taxRate: 0.33 },
-    ],
-  },
-  {
-    id: 'QA',
-    name: 'Qatar',
-    currency: 'QAR',
-    symbol: 'QAR ',
-    taxLabel: 'Customs & Port Registration',
-    insuranceRate: 0.025,
-    exchangeRateToUSD: 3.64,
-    isTier1: true,
-    metros: [{ id: 'qa-doh', name: 'Doha', taxRate: 0.05 }],
-  },
-
-  // --- GLOBAL COUNTRIES (A TO V COMPLETE LIST WITH CAPITALS) ---
-  {
-    id: 'AF',
-    name: 'Afghanistan',
-    currency: 'AFN',
-    symbol: 'Af',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 71.0,
-    isTier1: false,
-    metros: [{ id: 'af-kabul', name: 'Kabul Capital Hub', taxRate: 0.10 }],
-  },
-  {
-    id: 'AL',
-    name: 'Albania',
-    currency: 'ALL',
-    symbol: 'Lek',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 93.0,
-    isTier1: false,
-    metros: [{ id: 'al-tirana', name: 'Tirana Central Hub', taxRate: 0.20 }],
-  },
-  {
-    id: 'DZ',
-    name: 'Algeria',
-    currency: 'DZD',
-    symbol: 'DA',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 134.0,
-    isTier1: false,
-    metros: [{ id: 'dz-algiers', name: 'Algiers Hub', taxRate: 0.19 }],
-  },
-  {
-    id: 'AD',
-    name: 'Andorra',
-    currency: 'EUR',
-    symbol: '€',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 0.92,
-    isTier1: false,
-    metros: [{ id: 'ad-andorra', name: 'Andorra la Vella Hub', taxRate: 0.045 }],
-  },
-  {
-    id: 'AO',
-    name: 'Angola',
-    currency: 'AOA',
-    symbol: 'Kz',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 850.0,
-    isTier1: false,
-    metros: [{ id: 'ao-luanda', name: 'Luanda Hub', taxRate: 0.14 }],
-  },
-  {
-    id: 'AR',
-    name: 'Argentina',
-    currency: 'ARS',
-    symbol: '$',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 980.0,
-    isTier1: false,
-    metros: [{ id: 'ar-buenos', name: 'Buenos Aires Hub', taxRate: 0.35 }],
-  },
-  {
-    id: 'AM',
-    name: 'Armenia',
-    currency: 'AMD',
-    symbol: '֏',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 387.0,
-    isTier1: false,
-    metros: [{ id: 'am-yerevan', name: 'Yerevan Hub', taxRate: 0.20 }],
-  },
-  {
-    id: 'AT',
-    name: 'Austria',
-    currency: 'EUR',
-    symbol: '€',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 0.92,
-    isTier1: false,
-    metros: [{ id: 'at-vienna', name: 'Vienna Hub', taxRate: 0.20 }],
-  },
-  {
-    id: 'BS',
-    name: 'Bahamas',
-    currency: 'BSD',
-    symbol: 'B$',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 1.0,
-    isTier1: false,
-    metros: [{ id: 'bs-nassau', name: 'Nassau Hub', taxRate: 0.12 }],
-  },
-  {
-    id: 'BH',
-    name: 'Bahrain',
-    currency: 'BHD',
-    symbol: 'BD',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 0.38,
-    isTier1: false,
-    metros: [{ id: 'bh-manama', name: 'Manama Hub', taxRate: 0.10 }],
-  },
-  {
-    id: 'BD',
-    name: 'Bangladesh',
-    currency: 'BDT',
-    symbol: '৳',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 119.0,
-    isTier1: false,
-    metros: [{ id: 'bd-dhaka', name: 'Dhaka Hub', taxRate: 0.25 }],
-  },
-  {
-    id: 'BE',
-    name: 'Belgium',
-    currency: 'EUR',
-    symbol: '€',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 0.92,
-    isTier1: false,
-    metros: [{ id: 'be-brussels', name: 'Brussels Hub', taxRate: 0.21 }],
-  },
-  {
-    id: 'BR',
-    name: 'Brazil',
-    currency: 'BRL',
-    symbol: 'R$',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 5.65,
-    isTier1: false,
-    metros: [{ id: 'br-brasilia', name: 'Brasilia & Sao Paulo Hub', taxRate: 0.30 }],
-  },
-  {
-    id: 'CA',
-    name: 'Canada',
-    currency: 'CAD',
-    symbol: 'CA$',
-    taxLabel: 'HST & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 1.38,
-    isTier1: false,
-    metros: [
-      { id: 'ca-tor', name: 'Toronto, ON', taxRate: 0.13 },
-      { id: 'ca-van', name: 'Vancouver, BC', taxRate: 0.12 },
-    ],
-  },
-  {
-    id: 'CN',
-    name: 'China',
-    currency: 'CNY',
-    symbol: '¥',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 7.12,
-    isTier1: false,
-    metros: [
-      { id: 'cn-bj', name: 'Beijing Hub', taxRate: 0.20 },
-      { id: 'cn-sh', name: 'Shanghai Hub', taxRate: 0.20 },
-    ],
-  },
-  {
-    id: 'FR',
-    name: 'France',
-    currency: 'EUR',
-    symbol: '€',
-    taxLabel: 'TVA & Registration',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 0.92,
-    isTier1: false,
-    metros: [
-      { id: 'fr-par', name: 'Paris Hub', taxRate: 0.20 },
-      { id: 'fr-nce', name: 'Nice & Cannes Hub', taxRate: 0.20 },
-    ],
-  },
-  {
-    id: 'IT',
-    name: 'Italy',
-    currency: 'EUR',
-    symbol: '€',
-    taxLabel: 'IVA & Registration',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 0.92,
-    isTier1: false,
-    metros: [
-      { id: 'it-mil', name: 'Milan Hub', taxRate: 0.22 },
-      { id: 'it-rom', name: 'Rome Hub', taxRate: 0.22 },
-    ],
-  },
-  {
-    id: 'VN',
-    name: 'Vietnam',
-    currency: 'VND',
-    symbol: '₫',
-    taxLabel: 'Import & State Duty',
-    insuranceRate: 0.03,
-    exchangeRateToUSD: 25000.0,
-    isTier1: false,
-    metros: [
-      { id: 'vn-sgn', name: 'Ho Chi Minh City Hub', taxRate: 0.20 },
-      { id: 'vn-han', name: 'Hanoi Hub', taxRate: 0.20 },
+      { id: 'in-maa', name: 'Chennai', taxRate: 0.18 },
+      { id: 'in-kol', name: 'Kolkata', taxRate: 0.18 },
     ],
   },
 ];
+
+export const COUNTRIES: Country[] = TIER_1_COUNTRIES;
 
 export const COUNTRY_INDEX: Record<string, Country> = Object.fromEntries(
   COUNTRIES.map((c) => [c.id, c])
