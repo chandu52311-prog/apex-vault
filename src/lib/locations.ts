@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { COUNTRIES, COUNTRY_INDEX, Country, Metro } from './regions';
+import { COUNTRIES, COUNTRY_INDEX, Country, Metro, CATEGORIES, TABLES, CategoryKey, Table, isCategoryKey } from './regions';
+
+export { CATEGORIES, TABLES, isCategoryKey, COUNTRIES };
+export type { CategoryKey, Table };
 
 export function useRegion() {
   const [countryId, setCountryId] = useState<string>('US');
@@ -41,11 +44,11 @@ export function useRegion() {
   };
 
   const country = COUNTRY_INDEX[countryId] || COUNTRIES[0];
-  const metro = country.metros.find((m) => m.id === metroId) || country.metros[0] || {
+  const metro = country.metros.find((m: Metro) => m.id === metroId) || country.metros[0] || {
     id: 'us-nyc',
     name: 'New York, NY',
     taxRate: 0.088,
   };
 
-  return { country, metro, selectCountry, selectMetro };
+  return { country, metro, selectCountry, selectMetro, COUNTRIES };
 }
