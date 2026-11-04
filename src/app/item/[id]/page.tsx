@@ -122,7 +122,7 @@ function ItemDetailContent() {
           setSelectedCity(matchedCity || availableCities[0] || 'New York, NY');
         }
       } catch (err) {
-        // Fallback safe default: US / New York
+        // IP fail aithe safe ga US / New York lone untundi
       }
     }
 
@@ -145,7 +145,7 @@ function ItemDetailContent() {
     setLeadForm((prev) => ({ ...prev, countryCode: region.dialCode || '+1' }));
   }, [selectedRegion, region.dialCode]);
 
-  // 4. Product Loader (Fixed Exact Table Query - Data Mixing Bug Solved)
+  // 4. Product Loader (Fixed Exact Table Query & State Cleanup for Gallery Mismatch)
   useEffect(() => {
     let isCancelled = false;
 
@@ -158,6 +158,10 @@ function ItemDetailContent() {
       
       setLoading(true);
       setErrorMsg('');
+      setProduct(null);
+      setActiveImage('');
+      setActiveLabel('');
+      setSelectedColorHex('');
 
       // Loop teesivesi direct ga tableParam dwara exact table nunchi fetch chesthundi
       const { data, error } = await supabase
@@ -220,14 +224,16 @@ function ItemDetailContent() {
     
     if (Array.isArray(product.gallery)) {
       product.gallery.forEach((url) => {
-        if (url && !list.includes(url)) list.push(url);
+        if (url && typeof url === 'string' && !list.includes(url)) {
+          list.push(url);
+        }
       });
     }
     if (product.thumbnail_url && !list.includes(product.thumbnail_url)) {
       list.unshift(product.thumbnail_url);
     }
     return list.slice(0, 6);
-  }, [product]);
+  }, [product?.id, product?.gallery, product?.thumbnail_url]);
 
   const handleColorSelect = (color: ColorOption) => {
     setSelectedColorHex(color.hex);
@@ -459,6 +465,7 @@ function ItemDetailContent() {
             >
               {activeImage ? (
                 <img
+                  key={activeImage}
                   src={activeImage}
                   alt={`${product.brand} ${product.model_name}`}
                   className="h-full w-full object-cover object-center transition-all duration-500 ease-out select-none"
@@ -527,7 +534,7 @@ function ItemDetailContent() {
                     const isSelected = activeImage === url;
                     return (
                       <button
-                        key={idx}
+                        key={`${product.id}-thumb-${idx}`}
                         onClick={() => handleThumbnailClick(url, idx)}
                         className={`group relative aspect-[16/10] w-full overflow-hidden rounded-lg border bg-neutral-900 transition-all duration-300 ${
                           isSelected
@@ -614,7 +621,6 @@ function ItemDetailContent() {
                   </span>
                 </div>
 
-                {/* Modular EMI Breakdown */}
                 {isAutomotive && (
                   <div className="mt-2.5 flex items-center justify-between rounded-lg border border-white/5 bg-black/40 px-3 py-2 text-xs">
                     <span className="text-neutral-400">Estimated Vault EMI:</span>
@@ -646,7 +652,6 @@ function ItemDetailContent() {
                   </div>
                 </div>
 
-                {/* GADGET DYNAMIC HARDWARE SELECTION */}
                 {product.table === 'gadgets' && (
                   <div className="mt-6 space-y-4 pt-2">
                     <div>
@@ -703,7 +708,6 @@ function ItemDetailContent() {
                   </div>
                 )}
 
-                {/* DYNAMIC ACTION GATEWAYS */}
                 <div className="mt-6 space-y-2.5">
                   {isAutomotive ? (
                     <>
@@ -750,7 +754,6 @@ function ItemDetailContent() {
                     </>
                   ) : (
                     <>
-                      {/* Dynamic Affiliate Network Integration */}
                       <a
                         href={product.amazon_affiliate_url || `https://amazon.in?tag=${AFFILIATE_CONFIG.amazonTag}`}
                         target="_blank"
@@ -829,7 +832,6 @@ function ItemDetailContent() {
         </div>
       )}
 
-      {/* OFFICIAL LUXURY MODAL WITH SECURITY TIER SELECTOR & WHATSAPP DESK */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-md">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-900 p-6 shadow-2xl">
@@ -869,7 +871,6 @@ function ItemDetailContent() {
                   {activeWorkflow === 'security' && `Authorized security engineers will contact you regarding tracker and immobilizer integration in ${selectedCity}.`}
                 </p>
 
-                {/* Instant Dealership WhatsApp Concierge Gateway */}
                 <button
                   onClick={triggerWhatsAppConcierge}
                   className="w-full rounded-xl bg-emerald-500 py-3 text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 active:scale-[0.98]"
@@ -924,7 +925,6 @@ function ItemDetailContent() {
                   </div>
                 </div>
 
-                {/* VIP Security Armor Addon Tier Picker */}
                 {activeWorkflow === 'security' && (
                   <div className="space-y-2 pt-1">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Select Armor Tier</label>
@@ -979,7 +979,6 @@ function ItemDetailContent() {
         </div>
       )}
 
-      {/* Google AdSense Compliant Global Footer */}
       <Footer />
     </main>
   );
