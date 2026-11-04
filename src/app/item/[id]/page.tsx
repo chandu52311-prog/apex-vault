@@ -145,34 +145,31 @@ function ItemDetailContent() {
     setLeadForm((prev) => ({ ...prev, countryCode: region.dialCode || '+1' }));
   }, [selectedRegion, region.dialCode]);
 
-  // 4. Product Loader (Supabase Data Fetching)
+  // 4. Product Loader (Fixed Exact Table Query - Data Mixing Bug Solved)
   useEffect(() => {
     let isCancelled = false;
 
     async function loadItem() {
-      if (!id) return;
+      if (!id || !tableParam) {
+        setErrorMsg('Specification not found in Apex Vault Registry.');
+        setLoading(false);
+        return;
+      }
+      
       setLoading(true);
       setErrorMsg('');
 
-      const searchTables = tableParam ? [tableParam] : (['cars', 'bikes', 'gadgets'] as const);
-      let found: ProductItem | null = null;
-
-      for (const t of searchTables) {
-        const { data, error } = await supabase
-          .from(t)
-          .select('*')
-          .eq('id', id)
-          .maybeSingle();
-
-        if (data && !error) {
-          found = { ...data, table: t };
-          break;
-        }
-      }
+      // Loop teesivesi direct ga tableParam dwara exact table nunchi fetch chesthundi
+      const { data, error } = await supabase
+        .from(tableParam)
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
 
       if (isCancelled) return;
 
-      if (found) {
+      if (data && !error) {
+        const found = { ...data, table: tableParam };
         setProduct(found);
         
         const initialImg = 
@@ -227,7 +224,7 @@ function ItemDetailContent() {
       });
     }
     if (product.thumbnail_url && !list.includes(product.thumbnail_url)) {
-      list.push(product.thumbnail_url);
+      list.unshift(product.thumbnail_url);
     }
     return list.slice(0, 6);
   }, [product]);
