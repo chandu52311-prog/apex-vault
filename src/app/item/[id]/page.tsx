@@ -53,6 +53,45 @@ interface ProductItem {
   flipkart_affiliate_url?: string;
 }
 
+function parseColorOptions(colors: unknown, thumbnailUrl: string): ColorOption[] {
+  let parsed: unknown = colors;
+
+  if (typeof colors === 'string') {
+    try {
+      parsed = JSON.parse(colors);
+    } catch {
+      parsed = [];
+    }
+  }
+
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .filter((color): color is Record<string, unknown> =>
+      typeof color === 'object' && color !== null
+    )
+    .map((color) => {
+      const image = typeof color.image === 'string' && color.image.trim()
+        ? color.image
+        : typeof color.image_url === 'string' && color.image_url.trim()
+          ? color.image_url
+          : thumbnailUrl;
+
+      return {
+        name: typeof color.name === 'string' && color.name.trim()
+          ? color.name
+          : 'Official Finish',
+        hex: typeof color.hex === 'string' && color.hex.trim()
+          ? color.hex
+          : '#fbbf24',
+        image,
+        cities: Array.isArray(color.cities)
+          ? color.cities.filter((city): city is string => typeof city === 'string')
+          : undefined,
+      };
+    });
+}
+
 const ANGLE_LABELS = [
   'Front 3/4 Dynamic',
   'Rear Aero & Diffuser',
@@ -161,7 +200,11 @@ function ItemDetailContent() {
       if (isCancelled) return;
 
       if (data && !error) {
-        const found = { ...data, table: tableParam };
+        const found = {
+          ...data,
+          table: tableParam,
+          colors: parseColorOptions(data.colors, data.thumbnail_url || ''),
+        };
         setProduct(found);
         
         const initialImg = 
@@ -504,7 +547,12 @@ function ItemDetailContent() {
                             ? 'scale-110 border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)]'
                             : 'border-transparent opacity-70 hover:opacity-100'
                         }`}
-                        style={{ backgroundColor: c.hex }}
+                        style={{
+                          backgroundColor: c.hex,
+                          backgroundImage: c.image ? `url("${c.image.replace(/"/g, '\\"')}")` : undefined,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                        }}
                       />
                     );
                   })}

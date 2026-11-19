@@ -69,17 +69,23 @@ export default function HomePage() {
 
   // Fixed Catalog Fetching based on activeTab (Prevents Data Mixing)
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchCatalog() {
       if (activeTab === 'spare-parts') {
-        setLoading(false);
         setItems([]);
+        setLoading(false);
         return;
       }
+      setItems([]);
       setLoading(true);
       const { data, error } = await supabase
         .from(activeTab)
-        .select('*');
+        .select('*')
+        .abortSignal(controller.signal);
       
+      if (controller.signal.aborted) return;
+
       if (data && !error) {
         setItems(data);
       } else {
@@ -88,6 +94,8 @@ export default function HomePage() {
       setLoading(false);
     }
     fetchCatalog();
+
+    return () => controller.abort();
   }, [activeTab]);
 
   return (
@@ -150,7 +158,10 @@ export default function HomePage() {
           ).map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
+              onClick={() => {
+                setItems([]);
+                setActiveTab(tab.key);
+              }}
               className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition ${
                 activeTab === tab.key
                   ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/20'
