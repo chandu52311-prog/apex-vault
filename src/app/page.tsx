@@ -18,10 +18,69 @@ const supabase =
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
 
+const SUPERCAR_BRANDS = [
+  'lamborghini', 'ferrari', 'porsche', 'mclaren', 'bugatti',
+  'aston martin', 'aston-martin', 'pagani', 'koenigsegg', 'rimac',
+  'maserati', 'lotus', 'mercedes-amg', 'bentley', 'rolls-royce'
+];
+
+const SUPERBIKE_BRANDS = [
+  'ducati', 'kawasaki', 'bmw motorrad', 'bmw-motorrad', 'yamaha',
+  'honda', 'aprilia', 'suzuki', 'triumph', 'ktm', 'mv agusta',
+  'mv-agusta', 'harley-davidson', 'norton', 'moto guzzi'
+];
+
+const INVALID_CATALOG_WORDS = [
+  'test', 'dummy', 'sample', 'random', 'placeholder', 'unknown',
+  'mobile', 'phone', 'iphone', 'ipad', 'laptop', 'macbook',
+];
+
+function normalizeCatalogText(value: unknown): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isValidCatalogEntry(item: Record<string, any>, table: 'cars' | 'bikes' | 'gadgets'): boolean {
+  const brand = normalizeCatalogText(item.brand);
+  const model = normalizeCatalogText(item.model_name);
+  const category = normalizeCatalogText(item.category);
+  const combined = `${brand} ${model} ${category}`;
+
+  if (!brand || !model || INVALID_CATALOG_WORDS.some((word) => combined.includes(word))) return false;
+
+  if (table === 'cars') {
+    return SUPERCAR_BRANDS.some((allowed) => brand.includes(allowed));
+  }
+  if (table === 'bikes') {
+    return SUPERBIKE_BRANDS.some((allowed) => brand.includes(allowed));
+  }
+
+  const automotiveTechWords = [
+    'automotive', 'vehicle', 'car', 'motorcycle', 'dashcam', 'dash cam',
+    'obd', 'telemetry', 'navigation', 'infotainment', 'charging',
+    'ev charger', 'tire', 'tyre', 'radar', 'fleet'
+  ];
+  return automotiveTechWords.some((word) => combined.includes(word));
+}
+
+function cleanCatalogItems(items: Record<string, any>[], table: 'cars' | 'bikes' | 'gadgets'): Record<string, any>[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (!isValidCatalogEntry(item, table)) return false;
+    const identity = `${normalizeCatalogText(item.brand)}|${normalizeCatalogText(item.model_name)}|${normalizeCatalogText(item.year)}|${normalizeCatalogText(item.tier)}`;
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  });
+}
+
 export default function HomePage() {
   // Default values ni US & New York ga set chesthunnam
-  const [selectedRegion, setSelectedRegion] = useState('US');
-  const [selectedCity, setSelectedCity] = useState('New York, NY');
+  const [selectedRegion, setSelectedRegion] = useState('IN');
+  const [selectedCity, setSelectedCity] = useState('Anantapur');
   
   // Updated to support 4 tabs including spare-parts
   const [activeTab, setActiveTab] = useState<'cars' | 'bikes' | 'gadgets' | 'spare-parts'>('cars');
@@ -43,9 +102,11 @@ export default function HomePage() {
           setSelectedRegion(userCountry);
 
           const availableCities = REGION_REGISTRY[userCountry].cities || [];
-          const matchedCity = availableCities.find(
-            (c) => c.toLowerCase() === (userCity || '').toLowerCase()
-          );
+          const matchedCity = userCountry === 'IN'
+            ? availableCities.find((c) => c.toLowerCase() === 'anantapur')
+            : availableCities.find(
+                (c) => c.toLowerCase() === (userCity || '').toLowerCase()
+              );
 
           setSelectedCity(matchedCity || availableCities[0] || 'New York, NY');
         }
@@ -99,7 +160,7 @@ export default function HomePage() {
         if (isCancelled || controller.signal.aborted) return;
 
         if (data && !error) {
-          setItems(data);
+          setItems(cleanCatalogItems(data as Record<string, any>[], fetchTab));
         } else {
           setItems([]);
         }
@@ -225,7 +286,11 @@ export default function HomePage() {
             <div>
               <div className="mb-6">
                 <h2 className="text-2xl font-black uppercase text-white tracking-wide">
-                  {activeTab === 'cars' ? 'Supercars' : activeTab === 'bikes' ? 'Superbikes' : 'Luxury Devices'}
+                  {activeTab === 'cars'
+                    ? 'Verified Supercars'
+                    : activeTab === 'bikes'
+                      ? 'Verified Superbikes'
+                      : 'Automotive Technology'}
                 </h2>
                 <p className="text-xs text-neutral-400 mt-1">
                   Showing verified on-road pricing for <span className="text-amber-400 font-bold">{selectedCity} ({region.name})</span> in {region.currency}
@@ -238,7 +303,16 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {items.map((item) => {
+                  {items.length === 0 ? (
+                    <div className="col-span-full rounded-2xl border border-white/10 bg-neutral-950 px-6 py-16 text-center">
+                      <p className="text-sm font-bold uppercase tracking-widest text-neutral-300">
+                        No verified catalog entries
+                      </p>
+                      <p className="mt-2 text-xs text-neutral-500">
+                        This category is withheld until genuine database records and verified images are available.
+                      </p>
+                    </div>
+                  ) : items.map((item) => {
                     // Extract INR base price & apply dynamic regional rate
                     const baseInr = Number(item.current_price_inr ?? item.ex_showroom_inr ?? item.price ?? 0);
                     const convertedBase = baseInr * region.rate;

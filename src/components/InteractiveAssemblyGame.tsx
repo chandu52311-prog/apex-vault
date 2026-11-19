@@ -6,10 +6,12 @@ import { Check, ChevronRight, ExternalLink, Gauge, LockKeyhole, Package, Search,
 
 type PartCategory = 'Aero' | 'Brakes' | 'Exhaust' | 'Wheels';
 type Retailer = 'Amazon' | 'Flipkart' | 'CJ';
+type VehicleSystem = 'Car' | 'Bike';
 
 type AssemblyPart = {
   id: string;
   name: string;
+  vehicle: VehicleSystem;
   category: PartCategory;
   description: string;
   fitment: string;
@@ -23,6 +25,7 @@ const PARTS: AssemblyPart[] = [
   {
     id: 'aero-wing',
     name: 'Carbon-fiber aero wing',
+    vehicle: 'Car',
     category: 'Aero',
     description: 'Track-focused high-downforce rear wing',
     fitment: 'Rear deck · Mount point A',
@@ -34,6 +37,7 @@ const PARTS: AssemblyPart[] = [
   {
     id: 'brake-rotors',
     name: 'Carbon-ceramic brake rotors',
+    vehicle: 'Car',
     category: 'Brakes',
     description: 'Cross-drilled performance rotor set',
     fitment: 'Front axle · Mount point B',
@@ -45,6 +49,7 @@ const PARTS: AssemblyPart[] = [
   {
     id: 'titanium-exhaust',
     name: 'Titanium sport exhaust',
+    vehicle: 'Car',
     category: 'Exhaust',
     description: 'Lightweight valved exhaust assembly',
     fitment: 'Rear underbody · Mount point C',
@@ -56,12 +61,61 @@ const PARTS: AssemblyPart[] = [
   {
     id: 'forged-wheels',
     name: 'Forged magnesium wheels',
+    vehicle: 'Car',
     category: 'Wheels',
     description: 'Lightweight center-lock wheel set',
     fitment: 'Four corners · Mount point D',
     priceLabel: 'Explore options',
     position: { x: 24, y: 25 },
     searchQuery: 'Porsche 911 20 inch forged wheel',
+    affiliateLinks: {},
+  },
+  {
+    id: 'bike-brake-set',
+    name: 'Superbike brake set',
+    vehicle: 'Bike',
+    category: 'Brakes',
+    description: 'Track-spec radial brake component set',
+    fitment: 'Motorcycle front axle · Mount point A',
+    priceLabel: 'Explore options',
+    position: { x: 24, y: 69 },
+    searchQuery: 'superbike genuine radial brake set',
+    affiliateLinks: {},
+  },
+  {
+    id: 'bike-chain',
+    name: 'O-ring drive chain',
+    vehicle: 'Bike',
+    category: 'Aero',
+    description: 'Sealed motorcycle final-drive chain',
+    fitment: 'Rear sprocket · Mount point B',
+    priceLabel: 'Explore options',
+    position: { x: 77, y: 69 },
+    searchQuery: 'genuine superbike O-ring drive chain',
+    affiliateLinks: {},
+  },
+  {
+    id: 'bike-exhaust',
+    name: 'Performance exhaust',
+    vehicle: 'Bike',
+    category: 'Exhaust',
+    description: 'Model-specific motorcycle exhaust assembly',
+    fitment: 'Underframe · Mount point C',
+    priceLabel: 'Explore options',
+    position: { x: 77, y: 25 },
+    searchQuery: 'genuine superbike performance exhaust',
+    affiliateLinks: {},
+  },
+  {
+    id: 'bike-wheels',
+    name: 'Forged motorcycle wheels',
+    vehicle: 'Bike',
+    category: 'Wheels',
+    description: 'Forged wheel set for superbike applications',
+    fitment: 'Front and rear axles · Mount point D',
+    priceLabel: 'Explore options',
+    position: { x: 24, y: 25 },
+    searchQuery: 'genuine superbike forged wheels',
     affiliateLinks: {},
   },
 ];
@@ -138,25 +192,30 @@ function BlueprintCar() {
 
 export default function InteractiveAssemblyGame() {
   const [installed, setInstalled] = useState<string[]>([]);
+  const [vehicle, setVehicle] = useState<VehicleSystem>('Car');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<CategoryFilter>('All');
   const [activePart, setActivePart] = useState<string | null>(null);
   const [showGateway, setShowGateway] = useState<string | null>(null);
   const [fitmentError, setFitmentError] = useState(false);
 
-  const complete = installed.length === PARTS.length;
-  const progress = Math.round((installed.length / PARTS.length) * 100);
+  const vehicleParts = useMemo(
+    () => PARTS.filter((part) => part.vehicle === vehicle),
+    [vehicle]
+  );
+  const complete = vehicleParts.every((part) => installed.includes(part.id));
+  const progress = Math.round((vehicleParts.filter((part) => installed.includes(part.id)).length / vehicleParts.length) * 100);
 
   const filteredParts = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return PARTS.filter((part) => {
+    return vehicleParts.filter((part) => {
       const matchesCategory = category === 'All' || part.category === category;
       const matchesQuery =
         !normalized ||
         `${part.name} ${part.category} ${part.description}`.toLowerCase().includes(normalized);
       return matchesCategory && matchesQuery;
     });
-  }, [category, query]);
+  }, [category, query, vehicleParts]);
 
   const installPart = useCallback((partId: string) => {
     if (installed.includes(partId)) return;
@@ -172,6 +231,14 @@ export default function InteractiveAssemblyGame() {
   }, [installed]);
 
   const resetAssembly = useCallback(() => {
+    setInstalled([]);
+    setActivePart(null);
+    setShowGateway(null);
+    setFitmentError(false);
+  }, []);
+
+  const selectVehicle = useCallback((nextVehicle: VehicleSystem) => {
+    setVehicle(nextVehicle);
     setInstalled([]);
     setActivePart(null);
     setShowGateway(null);
@@ -195,6 +262,22 @@ export default function InteractiveAssemblyGame() {
           <p className="mt-1 text-sm text-neutral-400">
             Build elite supercars part-by-part using our interactive wireframe canvas.
           </p>
+          <div className="mt-4 flex gap-2">
+            {(['Car', 'Bike'] as VehicleSystem[]).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => selectVehicle(item)}
+                className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition ${
+                  vehicle === item
+                    ? 'border-amber-400 bg-amber-400 text-black'
+                    : 'border-white/10 bg-neutral-900 text-neutral-400 hover:text-white'
+                }`}
+              >
+                {item} Parts
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex items-center gap-3 self-start rounded-2xl border border-amber-400/20 bg-black/50 px-4 py-3 lg:self-auto">
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-400/10 text-amber-400">
@@ -234,7 +317,7 @@ export default function InteractiveAssemblyGame() {
 
             <div className="absolute inset-[12%_13%]">
               <BlueprintCar />
-              {PARTS.map((part, index) => {
+              {vehicleParts.map((part, index) => {
                 const isInstalled = installed.includes(part.id);
                 return (
                   <button

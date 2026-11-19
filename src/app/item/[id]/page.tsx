@@ -24,6 +24,7 @@ interface ColorOption {
   name: string;
   hex: string;
   image?: string;
+  gallery?: string[];
   cities?: string[];
 }
 
@@ -39,6 +40,13 @@ interface ProductItem {
   category?: string;
   engine_displacement?: string;
   max_power?: string;
+  torque?: string;
+  transmission?: string;
+  manufacturing_year?: number;
+  variant?: string;
+  availability?: string;
+  registration_status?: string;
+  verified_registration?: string;
   zero_to_hundred_kmh?: number;
   top_speed_kmh?: number;
   base_price_usd?: number;
@@ -96,6 +104,11 @@ function parseColorOptions(colors: unknown, thumbnailUrl: string): ColorOption[]
           ? color.hex.trim()
           : '#fbbf24',
         image: imageCandidate || safeThumbnail,
+        gallery: Array.isArray(color.gallery)
+          ? color.gallery.filter((url): url is string => typeof url === 'string' && url.trim().length > 0)
+          : Array.isArray(color.images)
+            ? color.images.filter((url): url is string => typeof url === 'string' && url.trim().length > 0)
+            : [],
         cities: Array.isArray(color.cities)
           ? color.cities.filter((city): city is string => typeof city === 'string')
           : undefined,
@@ -124,8 +137,8 @@ function ItemDetailContent() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const [selectedRegion, setSelectedRegion] = useState<string>('US');
-  const [selectedCity, setSelectedCity] = useState<string>('New York, NY');
+  const [selectedRegion, setSelectedRegion] = useState<string>('IN');
+  const [selectedCity, setSelectedCity] = useState<string>('Anantapur');
 
   const [activeImage, setActiveImage] = useState<string>('');
   const [activeLabel, setActiveLabel] = useState<string>('');
@@ -158,9 +171,11 @@ function ItemDetailContent() {
         if (userCountry && REGION_REGISTRY[userCountry]) {
           setSelectedRegion(userCountry);
           const availableCities = REGION_REGISTRY[userCountry].cities || [];
-          const matchedCity = availableCities.find(
-            (c) => c.toLowerCase() === (userCity || '').toLowerCase()
-          );
+          const matchedCity = userCountry === 'IN'
+            ? availableCities.find((c) => c.toLowerCase() === 'anantapur')
+            : availableCities.find(
+                (c) => c.toLowerCase() === (userCity || '').toLowerCase()
+              );
           setSelectedCity(matchedCity || availableCities[0] || 'New York, NY');
         }
       } catch (err) {
@@ -269,35 +284,32 @@ function ItemDetailContent() {
   const safeGallery = useMemo(() => {
     if (!product) return [];
     const list: string[] = [];
-    
-    if (product.thumbnail_url) {
-      list.push(product.thumbnail_url);
-    }
 
-    if (Array.isArray(product.gallery)) {
-      product.gallery.forEach((url) => {
-        if (url && typeof url === 'string' && !list.includes(url)) {
-          list.push(url);
-        }
+    const selectedColor = product.colors?.find((color) => color.hex === selectedColorHex);
+    if (selectedColor) {
+      if (selectedColor.image) list.push(selectedColor.image);
+      selectedColor.gallery?.forEach((url) => {
+        if (url && !list.includes(url)) list.push(url);
       });
-    }
-
-    if (Array.isArray(product.colors)) {
-      product.colors.forEach((c) => {
-        if (c.image && !list.includes(c.image)) {
-          list.push(c.image);
-        }
+    } else {
+      if (product.thumbnail_url) list.push(product.thumbnail_url);
+      product.gallery?.forEach((url) => {
+        if (url && !list.includes(url)) list.push(url);
       });
     }
 
     return Array.from(new Set(list)).slice(0, 8);
-  }, [product?.id, product?.thumbnail_url, product?.gallery, product?.colors]);
+  }, [product?.id, product?.thumbnail_url, product?.gallery, product?.colors, selectedColorHex]);
 
   const handleColorSelect = (color: ColorOption) => {
     setSelectedColorHex(color.hex);
     setActiveLabel(color.name);
+    const matchingGallery = color.gallery?.filter((url) => url.trim());
     setActiveImage(
-      color.image?.trim() || product?.thumbnail_url?.trim() || ''
+      color.image?.trim()
+      || matchingGallery?.[0]
+      || product?.thumbnail_url?.trim()
+      || ''
     );
   };
 
@@ -308,8 +320,13 @@ function ItemDetailContent() {
       setActiveLabel(matched.name);
       setSelectedColorHex(matched.hex);
     } else {
-      setActiveLabel(ANGLE_LABELS[idx] || `Frame ${idx + 1}`);
-      setSelectedColorHex('');
+      const activeColor = product?.colors?.find((color) => color.hex === selectedColorHex);
+      if (activeColor) {
+        setActiveLabel(activeColor.name);
+      } else {
+        setActiveLabel(ANGLE_LABELS[idx] || `Frame ${idx + 1}`);
+        setSelectedColorHex('');
+      }
     }
   };
 
@@ -626,8 +643,26 @@ function ItemDetailContent() {
                 {isAutomotive ? (
                   <>
                     <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Manufacturer / Year</span>
+                      <p className="mt-1 text-base font-bold text-white">
+                        {product.brand} / {product.manufacturing_year || product.year || 'Not verified'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Variant</span>
+                      <p className="mt-1 text-base font-bold text-white">
+                        {product.variant || product.tier || 'Not specified'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
                       <span className="text-[10px] uppercase tracking-wider text-neutral-500">Power Output</span>
                       <p className="mt-1 text-base font-bold text-white">{product.max_power || 'N/A'}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Torque</span>
+                      <p className="mt-1 text-base font-bold text-white">
+                        {product.torque || product.specs?.torque || 'Not verified'}
+                      </p>
                     </div>
                     <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
                       <span className="text-[10px] uppercase tracking-wider text-neutral-500">Top Velocity</span>
@@ -644,6 +679,30 @@ function ItemDetailContent() {
                     <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
                       <span className="text-[10px] uppercase tracking-wider text-neutral-500">Displacement</span>
                       <p className="mt-1 text-base font-bold text-white">{product.engine_displacement || 'N/A'}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Transmission</span>
+                      <p className="mt-1 text-base font-bold text-white">
+                        {product.transmission || product.specs?.transmission || 'Not verified'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Fuel Type</span>
+                      <p className="mt-1 text-base font-bold text-white">
+                        {product.fuel_type || product.specs?.fuel_type || 'Not verified'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Availability</span>
+                      <p className="mt-1 text-base font-bold text-white">
+                        {product.availability || 'Allocation status not verified'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/5 bg-black/40 p-3.5">
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Registration</span>
+                      <p className="mt-1 text-base font-bold text-white">
+                        {product.verified_registration || product.registration_status || 'Verification required'}
+                      </p>
                     </div>
                   </>
                 ) : (
