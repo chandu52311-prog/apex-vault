@@ -15,7 +15,10 @@ import Footer from '@/components/Footer';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase =
+  supabaseUrl.trim() && supabaseAnonKey.trim()
+    ? createClient(supabaseUrl.trim(), supabaseAnonKey.trim())
+    : null;
 
 interface ColorOption {
   name: string;
@@ -59,6 +62,9 @@ function parseColorOptions(colors: unknown, thumbnailUrl: string): ColorOption[]
   if (typeof colors === 'string') {
     try {
       parsed = JSON.parse(colors);
+      if (typeof parsed === 'string') {
+        parsed = JSON.parse(parsed);
+      }
     } catch {
       parsed = [];
     }
@@ -71,20 +77,25 @@ function parseColorOptions(colors: unknown, thumbnailUrl: string): ColorOption[]
       typeof color === 'object' && color !== null
     )
     .map((color) => {
-      const image = typeof color.image === 'string' && color.image.trim()
-        ? color.image
-        : typeof color.image_url === 'string' && color.image_url.trim()
-          ? color.image_url
-          : thumbnailUrl;
+      const imageCandidate =
+        typeof color.image === 'string' && color.image.trim()
+          ? color.image.trim()
+          : typeof color.image_url === 'string' && color.image_url.trim()
+            ? color.image_url.trim()
+            : '';
+      const safeThumbnail =
+        typeof thumbnailUrl === 'string' && thumbnailUrl.trim()
+          ? thumbnailUrl.trim()
+          : '';
 
       return {
         name: typeof color.name === 'string' && color.name.trim()
-          ? color.name
+          ? color.name.trim()
           : 'Official Finish',
         hex: typeof color.hex === 'string' && color.hex.trim()
-          ? color.hex
+          ? color.hex.trim()
           : '#fbbf24',
-        image,
+        image: imageCandidate || safeThumbnail,
         cities: Array.isArray(color.cities)
           ? color.cities.filter((city): city is string => typeof city === 'string')
           : undefined,
@@ -180,6 +191,12 @@ function ItemDetailContent() {
     async function loadItem() {
       if (!id || !tableParam) {
         setErrorMsg('Specification not found in Apex Vault Registry.');
+        setLoading(false);
+        return;
+      }
+
+      if (!supabase) {
+        setErrorMsg('Apex Vault catalog configuration is unavailable.');
         setLoading(false);
         return;
       }
@@ -279,9 +296,9 @@ function ItemDetailContent() {
   const handleColorSelect = (color: ColorOption) => {
     setSelectedColorHex(color.hex);
     setActiveLabel(color.name);
-    if (color.image) {
-      setActiveImage(color.image);
-    }
+    setActiveImage(
+      color.image?.trim() || product?.thumbnail_url?.trim() || ''
+    );
   };
 
   const handleThumbnailClick = (imgUrl: string, idx: number) => {
@@ -345,7 +362,7 @@ function ItemDetailContent() {
 
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!leadForm.name || !leadForm.phone || !product) return;
+    if (!leadForm.name || !leadForm.phone || !product || !supabase) return;
     setLeadSubmitting(true);
 
     const fullPhone = `${leadForm.countryCode} ${leadForm.phone}`;
@@ -506,6 +523,11 @@ function ItemDetailContent() {
                   alt={`${product.brand} ${product.model_name}`}
                   className="h-full w-full object-cover object-center transition-all duration-500 ease-out select-none"
                   draggable="false"
+                  onError={(event) => {
+                    if (product.thumbnail_url && event.currentTarget.src !== product.thumbnail_url) {
+                      event.currentTarget.src = product.thumbnail_url;
+                    }
+                  }}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs tracking-widest text-neutral-600 uppercase">

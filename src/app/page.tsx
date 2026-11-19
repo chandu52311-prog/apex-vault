@@ -11,10 +11,12 @@ import { calculateMonthlyEMI } from '@/data/finance';
 // Google AdSense Compliance Global Footer
 import Footer from '@/components/Footer';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+const supabase =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null;
 
 export default function HomePage() {
   // Default values ni US & New York ga set chesthunnam
@@ -70,32 +72,54 @@ export default function HomePage() {
   // Fixed Catalog Fetching based on activeTab (Prevents Data Mixing)
   useEffect(() => {
     const controller = new AbortController();
+    let isCancelled = false;
+    const fetchTab = activeTab;
 
     async function fetchCatalog() {
-      if (activeTab === 'spare-parts') {
+      setItems([]);
+
+      if (fetchTab === 'spare-parts') {
+        setLoading(false);
+        return;
+      }
+
+      if (!supabase) {
         setItems([]);
         setLoading(false);
         return;
       }
-      setItems([]);
-      setLoading(true);
-      const { data, error } = await supabase
-        .from(activeTab)
-        .select('*')
-        .abortSignal(controller.signal);
-      
-      if (controller.signal.aborted) return;
 
-      if (data && !error) {
-        setItems(data);
-      } else {
-        setItems([]);
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from(fetchTab)
+          .select('*')
+          .abortSignal(controller.signal);
+
+        if (isCancelled || controller.signal.aborted) return;
+
+        if (data && !error) {
+          setItems(data);
+        } else {
+          setItems([]);
+        }
+      } catch {
+        if (!isCancelled && !controller.signal.aborted) {
+          setItems([]);
+        }
+      } finally {
+        if (!isCancelled && !controller.signal.aborted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     }
+
     fetchCatalog();
 
-    return () => controller.abort();
+    return () => {
+      isCancelled = true;
+      controller.abort();
+    };
   }, [activeTab]);
 
   return (
@@ -190,6 +214,7 @@ export default function HomePage() {
               <div className="mt-8 flex flex-wrap gap-4">
                 <Link
                   href="/assembly/porsche-911-gt3-rs"
+                  prefetch={false}
                   className="rounded-xl bg-amber-400 px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-amber-400/20 transition hover:bg-amber-300 active:scale-[0.98]"
                 >
                   Launch 911 GT3 RS Assembly Lab &rarr;
